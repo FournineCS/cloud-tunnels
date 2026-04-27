@@ -300,20 +300,20 @@ public actor CaddyManager {
     /// but shouldn't touch our actor state.
     private static func drainPipe(_ pipe: Pipe, label: String, log: Logger) {
         let handle = pipe.fileHandleForReading
-        var buffer = Data()
+        let state = LineBufferBox()
         handle.readabilityHandler = { fh in
             let chunk = fh.availableData
             if chunk.isEmpty {
                 fh.readabilityHandler = nil
-                if !buffer.isEmpty, let tail = String(data: buffer, encoding: .utf8) {
+                if !state.buffer.isEmpty, let tail = String(data: state.buffer, encoding: .utf8) {
                     log.info("[\(label, privacy: .public)] \(tail, privacy: .public)")
                 }
                 return
             }
-            buffer.append(chunk)
-            while let newlineIdx = buffer.firstIndex(of: 0x0a) {
-                let lineData = buffer.subdata(in: 0..<newlineIdx)
-                buffer.removeSubrange(0...newlineIdx)
+            state.buffer.append(chunk)
+            while let newlineIdx = state.buffer.firstIndex(of: 0x0a) {
+                let lineData = state.buffer.subdata(in: 0..<newlineIdx)
+                state.buffer.removeSubrange(0...newlineIdx)
                 if let line = String(data: lineData, encoding: .utf8), !line.isEmpty {
                     log.info("[\(label, privacy: .public)] \(line, privacy: .public)")
                 }
@@ -383,4 +383,13 @@ public actor CaddyManager {
             throw CaddyError.reloadFailed(http.statusCode, body)
         }
     }
+}
+
+/// Boxed line-accumulator for `drainPipe`. The pipe's `readabilityHandler`
+/// closure is `@Sendable` under Swift 5.10+ strict concurrency, so the
+/// buffer it mutates must live behind a reference. `readabilityHandler`
+/// is documented to fire serially per file handle, which gives us the
+/// exclusion needed for `@unchecked Sendable`.
+private final class LineBufferBox: @unchecked Sendable {
+    var buffer = Data()
 }

@@ -1,0 +1,123 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & publish release
+    runs-on: macos-14
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          uname -m
+
+      - name: Resolve Swift packages
+        run: swift package resolve
+
+      - name: Run tests
+        run: make test
+
+      - name: Build universal app + zip
+        run: make zip
+
+      - name: Build per-arch zips
+        run: make zip-all
+
+      - name: Build universal ctun CLI
+        run: make cli
+
+      - name: Package ctun CLI tarball
+        run: |
+          mkdir -p build/cli
+          cp .build/apple/Products/Release/ctun build/cli/ctun
+          chmod +x build/cli/ctun
+          cd build/cli && tar -czf ../ctun-universal.tar.gz ctun
+
+      - name: Compute checksums
+        run: |
+          cd build
+          shasum -a 256 \
+            CloudTunnels.zip \
+            CloudTunnels-arm64.zip \
+            CloudTunnels-x86_64.zip \
+            ctun-universal.tar.gz \
+            > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Determine tag
+        id: tag
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          TAG="${INPUT_TAG:-$REF_NAME}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Releasing $TAG"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.tag }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          body: |
+            ## CloudTunnels ${{ steps.tag.outputs.tag }}
+
+            Native macOS menu bar app for managing GCP IAP, AWS SSM, Cloud SQL Proxy, and SSH port-forwarding tunnels.
+
+            ### Downloads
+
+            | Asset | Description |
+            |---|---|
+            | `CloudTunnels.zip` | Universal binary (Apple Silicon + Intel) |
+            | `CloudTunnels-arm64.zip` | Apple Silicon only |
+            | `CloudTunnels-x86_64.zip` | Intel only |
+            | `ctun-universal.tar.gz` | `ctun` CLI binary (universal) |
+            | `SHA256SUMS.txt` | Checksums for all assets |
+
+            ### Install
+
+            ```bash
+            # Download CloudTunnels.zip from the assets below, then:
+            unzip CloudTunnels.zip -d /Applications/
+            xattr -dr com.apple.quarantine /Applications/CloudTunnels.app
+            open /Applications/CloudTunnels.app
+            ```
+
+            Builds are ad-hoc signed. On first launch, right-click the app → Open, or run the `xattr` command above to clear the quarantine flag.
+
+            See the [User Guide](https://github.com/FournineCS/cloud-tunnels/blob/main/USERGUIDE.md) for full setup instructions.
+          files: |
+            build/CloudTunnels.zip
+            build/CloudTunnels-arm64.zip
+            build/CloudTunnels-x86_64.zip
+            build/ctun-universal.tar.gz
+            build/SHA256SUMS.txt

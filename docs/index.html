@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudTunnels — macOS menu bar tunnels for GCP, AWS, Cloud SQL, SSH</title>
+<meta name="description" content="Native macOS menu bar app for managing port-forwarding tunnels across GCP IAP, AWS SSM, Cloud SQL Proxy, and SSH. Plus a built-in toolbox of 23+ utilities and a ctun CLI.">
+<meta property="og:title" content="CloudTunnels">
+<meta property="og:description" content="Native macOS menu bar app for managing port-forwarding tunnels across GCP IAP, AWS SSM, Cloud SQL Proxy, and SSH.">
+<meta property="og:image" content="screenshots/20-add-gcp-tunnel.png">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0a0d18">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%98%81%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: oklch(13% 0.02 270);
+    --bg-elev: oklch(18% 0.025 270);
+    --bg-card: oklch(22% 0.03 270);
+    --border: oklch(30% 0.03 270);
+    --border-soft: oklch(25% 0.025 270);
+    --text: oklch(96% 0.01 270);
+    --text-dim: oklch(72% 0.02 270);
+    --text-muted: oklch(55% 0.02 270);
+
+    --accent-gcp: oklch(70% 0.18 230);
+    --accent-aws: oklch(75% 0.16 60);
+    --accent-sql: oklch(70% 0.17 145);
+    --accent-ssh: oklch(70% 0.20 290);
+    --accent-tools: oklch(75% 0.22 340);
+    --accent-grad: linear-gradient(115deg, var(--accent-tools) 0%, var(--accent-ssh) 45%, var(--accent-gcp) 100%);
+
+    --text-hero: clamp(3rem, 1.5rem + 6vw, 6.5rem);
+    --text-display: clamp(2rem, 1rem + 3.5vw, 3.75rem);
+    --text-base: clamp(1rem, 0.92rem + 0.4vw, 1.125rem);
+
+    --space-section: clamp(4rem, 3rem + 4vw, 8rem);
+    --space-block: clamp(2rem, 1.5rem + 2vw, 4rem);
+
+    --duration-normal: 320ms;
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+    --radius-card: 1rem;
+    --radius-btn: 0.625rem;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: var(--text-base);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  img { max-width: 100%; height: auto; display: block; }
+  code { font-family: 'SF Mono', 'JetBrains Mono', Menlo, monospace; font-size: 0.9em; }
+
+  .container { width: min(1200px, 92%); margin-inline: auto; }
+  section { padding-block: var(--space-section); position: relative; }
+
+  /* header */
+  header.site {
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    background: oklch(13% 0.02 270 / 0.72);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  header .row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-block: 1rem;
+  }
+  .brand {
+    font-weight: 800; letter-spacing: -0.02em; font-size: 1.05rem;
+    background: var(--accent-grad);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  nav.primary a {
+    color: var(--text-dim); text-decoration: none;
+    margin-left: 1.5rem; font-size: 0.95rem; font-weight: 500;
+    transition: color var(--duration-normal) var(--ease-out-expo);
+  }
+  nav.primary a:hover { color: var(--text); }
+
+  /* hero */
+  .hero { padding-top: 5rem; padding-bottom: 3rem; }
+  .hero .container {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: clamp(2rem, 4vw, 5rem);
+    align-items: center;
+  }
+  .hero::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 50% 60% at 85% 20%, oklch(38% 0.18 320 / 0.35), transparent 70%),
+      radial-gradient(ellipse 60% 70% at 10% 90%, oklch(32% 0.15 230 / 0.28), transparent 70%);
+  }
+  .eyebrow {
+    text-transform: uppercase; letter-spacing: 0.22em; font-size: 0.75rem;
+    color: var(--text-muted); font-weight: 600;
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 {
+    font-size: var(--text-hero); font-weight: 800;
+    letter-spacing: -0.04em; line-height: 0.95;
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 .grad {
+    background: var(--accent-grad);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .lead {
+    font-size: clamp(1.05rem, 1rem + 0.35vw, 1.25rem);
+    color: var(--text-dim);
+    max-width: 50ch;
+    margin-bottom: 2.25rem;
+  }
+  .cta { display: flex; gap: 0.875rem; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.875rem 1.5rem; border-radius: var(--radius-btn);
+    font-weight: 600; font-size: 0.95rem;
+    text-decoration: none; cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform var(--duration-normal) var(--ease-out-expo),
+                background var(--duration-normal) var(--ease-out-expo),
+                border-color var(--duration-normal) var(--ease-out-expo);
+    will-change: transform;
+  }
+  .btn-primary { background: var(--text); color: var(--bg); }
+  .btn-primary:hover { transform: translateY(-2px); }
+  .btn-ghost { background: transparent; color: var(--text); border-color: var(--border); }
+  .btn-ghost:hover { background: var(--bg-elev); transform: translateY(-2px); border-color: oklch(40% 0.05 270); }
+
+  .hero-shot {
+    position: relative;
+    justify-self: center;
+    max-width: 460px;
+  }
+  .hero-shot img {
+    border-radius: var(--radius-card);
+    box-shadow:
+      0 30px 90px -25px oklch(0% 0 0 / 0.7),
+      0 0 0 1px var(--border);
+  }
+  .hero-shot::after {
+    content: ''; position: absolute; inset: -12% -8% -8% -8%;
+    background: var(--accent-grad); filter: blur(80px); opacity: 0.18;
+    z-index: -1; pointer-events: none;
+    border-radius: 50%;
+  }
+
+  /* badges row */
+  .badges {
+    margin-top: 2rem;
+    display: flex; gap: 1.25rem; flex-wrap: wrap;
+    color: var(--text-muted); font-size: 0.85rem;
+    align-items: center;
+  }
+  .badges span { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .badges .dot { width: 0.4rem; height: 0.4rem; border-radius: 50%; background: var(--accent-sql); }
+
+  /* section heads */
+  .section-head { max-width: 64ch; margin-bottom: var(--space-block); }
+  .section-head h2 {
+    font-size: var(--text-display); font-weight: 800;
+    letter-spacing: -0.03em; line-height: 1.05;
+    margin-bottom: 1rem;
+  }
+  .section-head p { color: var(--text-dim); font-size: 1.125rem; }
+
+  /* providers */
+  .providers-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.25rem;
+  }
+  .provider-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    transition: transform var(--duration-normal) var(--ease-out-expo),
+                border-color var(--duration-normal) var(--ease-out-expo);
+  }
+  .provider-card:hover {
+    transform: translateY(-4px);
+    border-color: oklch(38% 0.05 270);
+  }
+  .provider-card .shot {
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    background: oklch(15% 0.02 270);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .provider-card .shot img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+  .provider-card .body { padding: 1.25rem 1.5rem 1.5rem; }
+  .provider-card h3 {
+    font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .provider-card h3 .dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; }
+  .provider-card.gcp h3 .dot { background: var(--accent-gcp); }
+  .provider-card.aws h3 .dot { background: var(--accent-aws); }
+  .provider-card.sql h3 .dot { background: var(--accent-sql); }
+  .provider-card.ssh h3 .dot { background: var(--accent-ssh); }
+  .provider-card p { color: var(--text-dim); font-size: 0.92rem; line-height: 1.5; }
+  .provider-card code { color: var(--text); background: oklch(25% 0.03 270); padding: 0.05rem 0.35rem; border-radius: 0.25rem; }
+
+  /* feature grid */
+  .feature-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.25rem;
+  }
+  .feature {
+    padding: 1.5rem;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-card);
+    background: var(--bg-elev);
+    transition: border-color var(--duration-normal) var(--ease-out-expo),
+                background var(--duration-normal) var(--ease-out-expo);
+  }
+  .feature:hover { border-color: oklch(38% 0.05 270); background: var(--bg-card); }
+  .feature h3 {
+    font-size: 1.1rem; font-weight: 700; letter-spacing: -0.01em;
+    margin-bottom: 0.5rem;
+  }
+  .feature p { color: var(--text-dim); font-size: 0.95rem; }
+  .feature code { color: var(--text); background: oklch(25% 0.03 270); padding: 0.05rem 0.35rem; border-radius: 0.25rem; }
+
+  /* tools */
+  .tools-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 360px) 1fr;
+    gap: clamp(2rem, 4vw, 4rem);
+    align-items: start;
+  }
+  .tools-shot {
+    position: sticky; top: 6rem;
+    border-radius: var(--radius-card);
+    box-shadow:
+      0 20px 60px -10px oklch(0% 0 0 / 0.55),
+      0 0 0 1px var(--border);
+  }
+  .tool-categories {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+  .tool-cat {
+    background: var(--bg-elev); border: 1px solid var(--border-soft);
+    border-radius: 0.75rem; padding: 1.1rem 1.25rem;
+  }
+  .tool-cat h4 {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.18em;
+    color: var(--accent-tools); margin-bottom: 0.75rem; font-weight: 700;
+  }
+  .tool-cat ul { list-style: none; }
+  .tool-cat li {
+    color: var(--text-dim); font-size: 0.875rem;
+    padding-block: 0.2rem;
+  }
+
+  /* code blocks */
+  pre {
+    background: oklch(11% 0.02 270);
+    border: 1px solid var(--border-soft);
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.7;
+    color: var(--text-dim);
+  }
+  pre code { color: var(--text); }
+  pre .com { color: var(--text-muted); }
+  pre .key { color: var(--accent-tools); }
+
+  .install-cols {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+  .install-cols h3 {
+    font-size: 1rem; margin-bottom: 0.875rem;
+    color: var(--text-dim); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.12em;
+  }
+
+  /* CLI section */
+  .cli-row {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 3rem; align-items: center;
+  }
+
+  /* footer */
+  footer.site {
+    border-top: 1px solid var(--border-soft);
+    padding-block: 2.5rem;
+    color: var(--text-muted); font-size: 0.9rem;
+  }
+  footer.site .row {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 1rem;
+  }
+  footer.site a { color: var(--text-dim); text-decoration: none; }
+  footer.site a:hover { color: var(--text); }
+
+  /* responsive */
+  @media (max-width: 900px) {
+    .hero .container { grid-template-columns: 1fr; }
+    .hero-shot { order: -1; max-width: 360px; }
+    .tools-layout { grid-template-columns: 1fr; }
+    .tools-shot { position: static; max-width: 360px; margin: 0 auto; }
+    .install-cols, .cli-row { grid-template-columns: 1fr; }
+    nav.primary a { margin-left: 1rem; font-size: 0.875rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="container row">
+    <div class="brand">CloudTunnels</div>
+    <nav class="primary">
+      <a href="#providers">Providers</a>
+      <a href="#features">Features</a>
+      <a href="#tools">Tools</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/FournineCS/cloud-tunnels">GitHub →</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <div>
+      <div class="eyebrow">Native macOS · Swift · Open Source</div>
+      <h1>One menu bar.<br><span class="grad">Every tunnel.</span></h1>
+      <p class="lead">Manage GCP IAP, AWS SSM, Cloud SQL Proxy, and SSH port-forwarding tunnels from a single menu bar app — with auto-reconnect, multi-account auth, kubeconfig auto-patching, and a <code>ctun</code> CLI.</p>
+      <div class="cta">
+        <a href="https://github.com/FournineCS/cloud-tunnels" class="btn btn-primary">View on GitHub</a>
+        <a href="#install" class="btn btn-ghost">Install</a>
+      </div>
+      <div class="badges">
+        <span><span class="dot"></span>macOS 13+</span>
+        <span><span class="dot"></span>Universal binary</span>
+        <span><span class="dot"></span>365 unit tests</span>
+      </div>
+    </div>
+    <div class="hero-shot">
+      <img src="screenshots/20-add-gcp-tunnel.png" alt="CloudTunnels GCP IAP tab in macOS menu bar" loading="eager" fetchpriority="high" width="420" height="540">
+    </div>
+  </div>
+</section>
+
+<section id="providers">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Four providers, one workflow</div>
+      <h2>Whatever the cloud, the same menu bar.</h2>
+      <p>Unified UI, unified status, unified config — across GCP IAP, AWS SSM, Cloud SQL Auth Proxy, and SSH. Each tunnel pins to its own account or profile, so multi-tenant work doesn't mean re-logging in.</p>
+    </div>
+    <div class="providers-grid">
+      <article class="provider-card gcp">
+        <div class="shot"><img src="screenshots/20-add-gcp-tunnel.png" alt="GCP IAP tunnels"></div>
+        <div class="body">
+          <h3><span class="dot"></span>GCP IAP</h3>
+          <p>Wraps <code>gcloud compute start-iap-tunnel</code>. Pin per-tunnel gcloud accounts; run multiple identities side by side without re-auth.</p>
+        </div>
+      </article>
+      <article class="provider-card aws">
+        <div class="shot"><img src="screenshots/02-aws-tab.png" alt="AWS SSM tunnels"></div>
+        <div class="body">
+          <h3><span class="dot"></span>AWS SSM</h3>
+          <p>Wraps <code>aws ssm start-session</code>. Direct port-forward or bastion-to-RDS, with per-tunnel profile and region override.</p>
+        </div>
+      </article>
+      <article class="provider-card sql">
+        <div class="shot"><img src="screenshots/20-add-sql-tunnel.png" alt="Cloud SQL Proxy tunnels"></div>
+        <div class="body">
+          <h3><span class="dot"></span>Cloud SQL Proxy</h3>
+          <p>Drives <code>cloud-sql-proxy</code> v2. Private IP, auto IAM auth, and service-account impersonation as toggles.</p>
+        </div>
+      </article>
+      <article class="provider-card ssh">
+        <div class="shot"><img src="screenshots/04-ssh-tab.png" alt="SSH tunnels"></div>
+        <div class="body">
+          <h3><span class="dot"></span>SSH</h3>
+          <p>SOCKS5 + <code>-L</code> forwards over SSH config alias or IAP-wrapped <code>gcloud compute ssh</code>. Patches kubeconfig automatically.</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Designed for daily use</div>
+      <h2>The little things that add up.</h2>
+      <p>Built by an SRE for SREs. Every quirk you've hit running gcloud / aws / ssh tunnels by hand is solved here.</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature">
+        <h3>Auto-reconnect</h3>
+        <p>Network drops or instance restarts retry up to 3× with backoff. Auth-expiry skips reconnect to avoid loops.</p>
+      </div>
+      <div class="feature">
+        <h3>Auth-expiry detection</h3>
+        <p>Watches stderr for token-revoked patterns per provider, surfaces a notification, and pauses retries.</p>
+      </div>
+      <div class="feature">
+        <h3>Free-port autodetection</h3>
+        <p>Add Tunnel form auto-fills the next free local port — a second Postgres tunnel never collides with the first.</p>
+      </div>
+      <div class="feature">
+        <h3>Kubeconfig auto-patch</h3>
+        <p>SSH tunnels with a SOCKS port automatically set <code>proxy-url</code> on connect and unset it on disconnect.</p>
+      </div>
+      <div class="feature">
+        <h3>Quick actions</h3>
+        <p>One-click open: <code>k9s</code>, <code>psql</code>, browsers, RDP, VNC, MongoDB Compass — driven by tunnel kind.</p>
+      </div>
+      <div class="feature">
+        <h3>Calendar radar</h3>
+        <p>Next-meeting banner with Join button (Zoom / Meet / Teams / Webex auto-detected) plus pre-meeting reminders.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="tools">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Tools tab</div>
+      <h2>23+ utilities you stop opening other apps for.</h2>
+      <p>Port killer, JSON formatter, cert chain inspector, JWT decoder, kubeconfig viewer, cluster health, cron parser. Everything runs locally.</p>
+    </div>
+    <div class="tools-layout">
+      <img class="tools-shot" src="screenshots/05b-tools-tab-bottom.png" alt="Tools tab grid" loading="lazy">
+      <div class="tool-categories">
+        <div class="tool-cat">
+          <h4>Network</h4>
+          <ul><li>Port Inspector</li><li>Public IP</li></ul>
+        </div>
+        <div class="tool-cat">
+          <h4>Encoding</h4>
+          <ul><li>JSON Formatter</li><li>Base64</li><li>JWT Decoder</li><li>Hash Generator</li></ul>
+        </div>
+        <div class="tool-cat">
+          <h4>TLS / SSL</h4>
+          <ul><li>SSL Checker</li><li>Certificate Decoder</li><li>CSR Decoder</li><li>Key Matcher</li><li>SSL Converter</li></ul>
+        </div>
+        <div class="tool-cat">
+          <h4>Identifiers</h4>
+          <ul><li>UUID Generator</li><li>Timestamp</li></ul>
+        </div>
+        <div class="tool-cat">
+          <h4>Generation</h4>
+          <ul><li>Password</li><li>JWT / HMAC Secret</li><li>Share Secret</li></ul>
+        </div>
+        <div class="tool-cat">
+          <h4>Cloud</h4>
+          <ul><li>kubectl Context</li><li>Kubeconfig Inspector</li><li>Cluster Health</li><li>K8s Secret Coder</li><li>Cron Parser</li></ul>
+        </div>
+        <div class="tool-cat">
+          <h4>Productivity</h4>
+          <ul><li>Scratchpad</li><li>Calendar</li></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Install</div>
+      <h2>Build it, run it, scriptable.</h2>
+      <p>Requires macOS 13+ and Xcode 15 command-line tools. Universal binary out of the box.</p>
+    </div>
+    <div class="install-cols">
+      <div>
+        <h3>App + CLI</h3>
+<pre><code><span class="com"># clone, build, install</span>
+git clone https://github.com/FournineCS/cloud-tunnels.git
+cd cloud-tunnels
+make app          <span class="com"># build/CloudTunnels.app</span>
+make install      <span class="com"># /Applications</span>
+make install-cli  <span class="com"># /usr/local/bin/ctun</span></code></pre>
+      </div>
+      <div>
+        <h3>Drive it from the shell</h3>
+<pre><code>ctun list                  <span class="com"># all tunnels</span>
+ctun start prod-db         <span class="com"># foreground</span>
+ctun start prod-db --detach
+ctun status
+ctun stop prod-db          <span class="com"># also stops GUI tunnels</span></code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="site">
+  <div class="container row">
+    <div>© Fournine. MIT-licensed. Built in Swift.</div>
+    <div>
+      <a href="https://github.com/FournineCS/cloud-tunnels">GitHub</a> ·
+      <a href="https://github.com/FournineCS/cloud-tunnels/blob/main/USERGUIDE.md">User guide</a> ·
+      <a href="https://github.com/FournineCS/cloud-tunnels/issues">Issues</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+._*
+
+# SwiftPM build artifacts
+.build/
+.build-*/
+build/
+Packages/
+*.xcodeproj
+xcuserdata/
+DerivedData/
+
+# Vendored binaries (downloaded by `make download-caddy`)
+vendor/
+
+# Swift
+*.swiftpm
+.swiftpm/
+
+# Environment & local config
+.env
+.env.local
+
+# Logs
+*.log
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~

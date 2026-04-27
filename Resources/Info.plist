@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleDisplayName</key>
+    <string>CloudTunnels</string>
+    <key>CFBundleExecutable</key>
+    <string>CloudTunnels</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.fourninecloud.cloud-tunnels</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>CloudTunnels</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSSupportsAutomaticTermination</key>
+    <false/>
+    <key>NSSupportsSuddenTermination</key>
+    <false/>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>CloudTunnels uses AppleScript to open SSH sessions in Terminal.app or iTerm2 when you click the quick-action button on a tunnel.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>CloudTunnels reads upcoming meetings from your calendars so it can show a next-meeting banner in the menu bar and fire reminders before meetings start.</string>
+</dict>
+</plist>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.fourninecloud.cloud-tunnels.proxy-helper</string>
+
+    <!-- BundleProgram is relative to the .app bundle that owns this plist.
+         SMAppService resolves it against Contents/ inside the app. -->
+    <key>BundleProgram</key>
+    <string>Contents/MacOS/CloudTunnelsProxyHelper</string>
+
+    <key>MachServices</key>
+    <dict>
+        <key>com.fourninecloud.cloud-tunnels.proxy-helper</key>
+        <true/>
+    </dict>
+
+    <!-- Restricts which app bundles may register / talk to this daemon.
+         Must match the parent app's CFBundleIdentifier exactly. -->
+    <key>AssociatedBundleIdentifiers</key>
+    <array>
+        <string>com.fourninecloud.cloud-tunnels</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>KeepAlive</key>
+    <false/>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Library/Logs/CloudTunnels/proxy-helper.err.log</string>
+    <key>StandardOutPath</key>
+    <string>/Library/Logs/CloudTunnels/proxy-helper.out.log</string>
+</dict>
+</plist>

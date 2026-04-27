@@ -90,13 +90,14 @@ struct StartCommand: ParsableCommand {
 
     private func waitForRunner(_ runner: CLIRunner) -> Int32 {
         let sem = DispatchSemaphore(value: 0)
-        var exitCode: Int32 = 0
+        let box = ExitCodeBox()
         Task.detached {
-            exitCode = await runner.runForeground()
+            let code = await runner.runForeground()
+            box.value = code
             sem.signal()
         }
         sem.wait()
-        return exitCode
+        return box.value
     }
 
     private func safeName(_ s: String) -> String {
@@ -127,15 +128,24 @@ struct RunDetachedCommand: ParsableCommand {
         )
         let runner = CLIRunner(tunnel: tunnel)
         let sem = DispatchSemaphore(value: 0)
-        var exitCode: Int32 = 0
+        let box = ExitCodeBox()
         Task.detached {
-            exitCode = await runner.runForeground()
+            let code = await runner.runForeground()
+            box.value = code
             sem.signal()
         }
         sem.wait()
         PidFile.remove(for: tunnel.name)
-        if exitCode != 0 {
-            throw ExitCode(exitCode)
+        if box.value != 0 {
+            throw ExitCode(box.value)
         }
     }
+}
+
+/// Boxed exit code shared between the synchronous CLI entry point and the
+/// detached Task that drives `CLIRunner`. Mutation under Swift's strict
+/// concurrency requires a reference type; correctness is guaranteed by the
+/// surrounding semaphore signal/wait happens-before relation.
+private final class ExitCodeBox: @unchecked Sendable {
+    var value: Int32 = 0
 }

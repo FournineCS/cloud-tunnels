@@ -1,16 +1,26 @@
-# CloudTunnels (Swift)
+# CloudTunnels
 
 Native macOS menu bar app for managing port-forwarding tunnels across **GCP
-IAP**, **AWS Session Manager**, and **Cloud SQL Auth Proxy**. Originally a
-Python `gcp-iap-tunnel-app` clone; now multi-cloud. Shells out to
-`gcloud compute start-iap-tunnel`, `aws ssm start-session`, and
-`cloud-sql-proxy` and manages tunnel lifecycle, multi-account auth state,
-auto-reconnect, and notifications.
+IAP**, **AWS Session Manager**, **Cloud SQL Auth Proxy**, and **SSH**. Shells
+out to `gcloud compute start-iap-tunnel`, `aws ssm start-session`,
+`cloud-sql-proxy`, and `ssh` (or `gcloud compute ssh` for IAP-wrapped SSH).
+Manages tunnel lifecycle, multi-account auth state, auto-reconnect, and
+notifications. Includes a `ctun` CLI for scripting and headless use.
 
 Bundle ID: `com.fourninecloud.cloud-tunnels`. On first launch, config is
 auto-migrated from the previous `GCPIAPTunnel` Application Support directory
 (and before that, the Python `~/.gcp-iap-tunnels` dotfile) — existing users
 keep their tunnels on upgrade.
+
+## Screenshots
+
+| GCP IAP | AWS SSM | Cloud SQL | SSH |
+|---|---|---|---|
+| ![GCP tab](docs/screenshots/20-add-gcp-tunnel.png) | ![AWS tab](docs/screenshots/02-aws-tab.png) | ![SQL tab](docs/screenshots/20-add-sql-tunnel.png) | ![SSH tab](docs/screenshots/04-ssh-tab.png) |
+
+| Tools overview | Port Inspector | JSON Formatter | JWT Decoder |
+|---|---|---|---|
+| ![Tools tab](docs/screenshots/05b-tools-tab-bottom.png) | ![Port Inspector](docs/screenshots/06-tool-port-inspector.png) | ![JSON Formatter](docs/screenshots/12-tool-json-formatter.png) | ![JWT Decoder](docs/screenshots/tool-jwt-decoder.png) |
 
 ## Requirements
 
@@ -26,11 +36,12 @@ keep their tunnels on upgrade.
   `/usr/local/bin`, `/opt/homebrew/bin`, `~/bin`). Install with
   `brew install cloud-sql-proxy`, then run
   `gcloud auth application-default login` once to set up ADC.
+- For SSH tunnels: `ssh` is included with macOS. For GCP IAP-wrapped SSH,
+  `gcloud` is also required (same as GCP IAP tunnels).
 
 ## Build & run
 
 ```bash
-cd macos
 make test          # swift test
 make app           # build Release + package build/CloudTunnels.app
 make run           # build + open
@@ -49,7 +60,8 @@ set `SIGN_IDENTITY` to your certificate before running `make app`.
 
 ## First launch (unsigned)
 
-Because this is an internal unsigned build, Gatekeeper will block it once:
+If you build without a signing identity (the default, `SIGN_IDENTITY=-`),
+Gatekeeper will block the first launch:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/CloudTunnels.app
@@ -84,15 +96,17 @@ Or open **Console.app** and filter by the subsystem.
 | Layer | Files |
 |---|---|
 | Models | `Sources/TunnelCore/Models/{Tunnel,ProviderConfig,TunnelStatus,Preferences}.swift` |
+| Launchers | `Sources/TunnelCore/{GCPIAPLauncher,AWSSSMLauncher,CloudSQLProxyLauncher,SSHLauncher}.swift` |
 | Core | `Sources/CloudTunnels/Core/{AuthManager,AWSAuthManager,TunnelManager}.swift` |
 | UI | `Sources/CloudTunnels/UI/{MenuBarView,AddEditTunnelView,PreferencesView,HelpView}.swift` |
-| Services | `Sources/CloudTunnels/Services/{Notifications,QuickAction}.swift` |
+| Services | `Sources/CloudTunnels/Services/{Notifications,QuickAction,CalendarManager}.swift` |
 | App entry | `Sources/CloudTunnels/App/CloudTunnelsApp.swift` |
+| CLI | `Sources/ctun/` |
 | Tests | `Tests/CloudTunnelsTests/*.swift` |
 
 ## Providers
 
-Each saved tunnel is tagged with one of three providers:
+Each saved tunnel is tagged with one of four providers:
 
 ### GCP IAP
 
@@ -138,28 +152,35 @@ The tunnel reuses the existing **gcloud account** picker; selecting an account
 forwards `CLOUDSDK_CORE_ACCOUNT` to `cloud-sql-proxy` so ADC resolves to that
 identity. Install the binary with `brew install cloud-sql-proxy`.
 
-## Parity with the Python version
+### SSH
 
-| Feature | Python | Swift |
-|---|---|---|
-| Menu bar icon with status | rumps emoji | SF Symbol (`cloud` / `cloud.fill`) |
-| Add/edit/delete tunnel | PyObjC NSAlert forms | SwiftUI Form in a floating NSWindow |
-| Connect/disconnect | `subprocess.Popen` + daemon threads | `Process` wrapped in `TunnelProcess` with `AsyncStream` |
-| Stderr parsing | `readline()` in thread | Pipe drain + line splitter |
-| "Listening on port" + 15s fallback | yes | yes |
-| Auth expiry regex list | 6 patterns | same 6 patterns (`TunnelProcess.authExpiredPatterns`) |
-| Auto-reconnect 3×/10s (skip on auth) | yes | yes |
-| Port cleanup via `lsof -ti :PORT` | yes | `PortUtil.killHolders` |
-| Periodic auth check | daemon thread, 30 min | `Task` with `Task.sleep`, configurable |
-| Persisted config | `~/.gcp-iap-tunnels/config.json` | `~/Library/Application Support/CloudTunnels/config.json` with chained migration |
+Plain SSH port forwarding and SOCKS5 proxy tunnels. Two upstream modes:
+
+- **SSH config alias** — uses a `Host` entry from `~/.ssh/config`. The alias
+  dropdown is populated automatically from your config file.
+- **GCP IAP-wrapped SSH** — wraps `gcloud compute ssh` with `--tunnel-through-iap`
+  to reach instances with no public IP.
+
+Each SSH tunnel can bind any combination of:
+- **SOCKS5 port** (`-D`) — routes `kubectl`, a browser, or any SOCKS-aware client
+  through the tunnel.
+- **Local forwards** (`-L`) — forward individual ports to remote hosts reachable
+  from the bastion.
+
+**Kubeconfig patching** — when a SOCKS port is set, CloudTunnels can automatically
+patch a kubeconfig cluster entry with `proxy-url=socks5://127.0.0.1:<port>` on
+connect and remove it on disconnect, so `kubectl` works without manual edits.
 
 ## Smoke test checklist
 
 1. `make test` — all unit tests pass
 2. `make run` — icon appears in the menu bar
-3. Click **Login** — `gcloud auth login` opens browser, icon updates on success
-4. **Add Tunnel…** → fill a real IAP-reachable instance → Save → Start
-5. `lsof -i :LOCALPORT` shows the `gcloud` process bound to your local port
-6. Click **Stop** → process exits, port freed
-7. `gcloud auth revoke <account>` while a tunnel runs → tunnel dies, notification fires, auto-reconnect does **not** kick in
-8. Quit the app → `pgrep -f start-iap-tunnel` is empty
+3. **GCP**: click **GCP Login** → `gcloud auth login` opens browser, icon badge updates
+4. **Add Tunnel…** → fill a real IAP-reachable instance → Save → Start →
+   `lsof -i :LOCALPORT` shows the `gcloud` process bound to your local port
+5. Click **Stop** → process exits, port freed
+6. `gcloud auth revoke <account>` while a GCP tunnel runs → tunnel dies,
+   notification fires, auto-reconnect does **not** kick in
+7. **SSH**: add a tunnel using a `~/.ssh/config` alias with a SOCKS port →
+   Start → verify `kubectl` routes through the proxy
+8. Quit the app → `pgrep -f "start-iap-tunnel\|cloud-sql-proxy"` is empty

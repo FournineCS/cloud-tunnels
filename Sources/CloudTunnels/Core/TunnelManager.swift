@@ -42,8 +42,8 @@ final class TunnelManager: ObservableObject {
 
         // Listen for `ctun stop <name>` requests so we disconnect the same
         // tunnel cleanly (no auto-reconnect race) when the CLI asks for it.
-        self.stopRequestObserver = IPCNotifications.observeStopRequest { [weak self] id in
-            Task { @MainActor in
+        self.stopRequestObserver = IPCNotifications.observeStopRequest { id in
+            Task { @MainActor [weak self] in
                 guard let self else { return }
                 if self.tunnels.contains(where: { $0.id == id }) {
                     self.log.info("ipc stop request received for \(id.uuidString, privacy: .public)")

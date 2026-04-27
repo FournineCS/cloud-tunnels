@@ -92,8 +92,8 @@ final class LogStreamer: ObservableObject {
             }
         }
 
-        proc.terminationHandler = { [weak self] terminated in
-            Task { @MainActor in
+        proc.terminationHandler = { terminated in
+            Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.isRunning = false
                 self.process = nil

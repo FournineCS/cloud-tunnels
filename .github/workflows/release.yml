@@ -14,11 +14,14 @@ on:
 permissions:
   contents: write
 
+env:
+  SIGN_IDENTITY: "Developer ID Application: FOURNINE CLOUD SOLUTIONS PRIVATE LIMITED (XUKA94C5G4)"
+
 jobs:
   build:
-    name: Build & publish release
+    name: Build, sign, notarize & publish
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -46,11 +49,88 @@ jobs:
       - name: Run tests
         run: make test
 
-      - name: Build universal app + zip
+      # Imports the Developer ID Application certificate (exported as a
+      # .p12 from Keychain Access) into a fresh ephemeral keychain on
+      # the runner, makes that keychain the default so codesign/stapler
+      # pick up the identity automatically, and cleans up at job end.
+      - name: Import Developer ID certificate
+        env:
+          P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          CERT_PATH="$RUNNER_TEMP/cert.p12"
+          echo -n "$P12_BASE64" | base64 --decode > "$CERT_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" \
+            -P "$P12_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -s "$KEYCHAIN_PATH"
+          rm "$CERT_PATH"
+          echo "Available signing identities:"
+          security find-identity -v -p codesigning
+
+      - name: Build universal app + zip (signed)
         run: make zip
 
-      - name: Build per-arch zips
+      - name: Build per-arch zips (signed)
         run: make zip-all
+
+      # Submits all three zips to Apple's notary service in parallel,
+      # waits for each verdict, staples the bundle, and re-zips so the
+      # distributed archive carries the staple. Apple accepts concurrent
+      # submissions; total wall time ≈ slowest single submission.
+      - name: Notarize and staple all zips
+        env:
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          submit_and_staple() {
+            local zip="$1"
+            local app="$2"
+            local label
+            label="$(basename "$zip")"
+            echo "[$label] submitting to notary..."
+            xcrun notarytool submit "$zip" \
+              --apple-id "$NOTARY_APPLE_ID" \
+              --password "$NOTARY_PASSWORD" \
+              --team-id "$NOTARY_TEAM_ID" \
+              --wait
+            echo "[$label] stapling..."
+            xcrun stapler staple "$app"
+            xcrun stapler validate "$app"
+            rm -f "$zip"
+            ( cd "$(dirname "$app")" && \
+              ditto -c -k --sequesterRsrc --keepParent \
+                "$(basename "$app")" "$(basename "$zip")" )
+            echo "[$label] done."
+          }
+          submit_and_staple build/CloudTunnels.zip        build/CloudTunnels.app       & P1=$!
+          submit_and_staple build/CloudTunnels-arm64.zip  build/arm64/CloudTunnels.app & P2=$!
+          submit_and_staple build/CloudTunnels-x86_64.zip build/x86_64/CloudTunnels.app & P3=$!
+          wait $P1
+          wait $P2
+          wait $P3
+
+      - name: Verify Gatekeeper acceptance
+        run: |
+          for app in build/CloudTunnels.app build/arm64/CloudTunnels.app build/x86_64/CloudTunnels.app; do
+            echo "=== $app ==="
+            xcrun stapler validate "$app"
+            spctl -a -vvv -t install "$app" || true
+          done
 
       - name: Build universal ctun CLI
         run: make cli
@@ -72,6 +152,11 @@ jobs:
             ctun-universal.tar.gz \
             > SHA256SUMS.txt
           cat SHA256SUMS.txt
+
+      - name: Clean up keychain
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true
 
       - name: Determine tag
         id: tag
@@ -110,13 +195,11 @@ jobs:
             ### Install
 
             ```bash
-            # Download CloudTunnels.zip from the assets below, then:
             unzip CloudTunnels.zip -d /Applications/
-            xattr -dr com.apple.quarantine /Applications/CloudTunnels.app
             open /Applications/CloudTunnels.app
             ```
 
-            Builds are ad-hoc signed. On first launch, right-click the app → Open, or run the `xattr` command above to clear the quarantine flag.
+            All builds are signed with Apple Developer ID and notarized by Apple — Gatekeeper accepts them on first launch with no warnings.
 
             See the [User Guide](https://github.com/FournineCS/cloud-tunnels/blob/main/USERGUIDE.md) for full setup instructions.
           files: |

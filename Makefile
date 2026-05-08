@@ -35,6 +35,12 @@ SIGN_IDENTITY ?= -
 APP_ENTITLEMENTS = Resources/CloudTunnels.entitlements
 HELPER_ENTITLEMENTS = Resources/CloudTunnelsProxyHelper.entitlements
 
+# Notarization profile name stored in the login keychain via:
+#   xcrun notarytool store-credentials "$(NOTARY_PROFILE)" \
+#       --apple-id <id> --team-id <team> --password <app-specific-password>
+# Override on the command line if you store creds under a different label.
+NOTARY_PROFILE ?= fournine-notary
+
 # Per-arch build paths keep XCBuild caches from colliding.
 ARM64_BUILD_PATH = .build-arm64
 X86_64_BUILD_PATH = .build-x86_64
@@ -44,11 +50,13 @@ ARM64_HELPER_BIN = $(ARM64_BUILD_PATH)/arm64-apple-macosx/release/$(HELPER_NAME)
 X86_64_HELPER_BIN = $(X86_64_BUILD_PATH)/x86_64-apple-macosx/release/$(HELPER_NAME)
 ARM64_CLI_BIN = $(ARM64_BUILD_PATH)/arm64-apple-macosx/release/$(CLI_NAME)
 X86_64_CLI_BIN = $(X86_64_BUILD_PATH)/x86_64-apple-macosx/release/$(CLI_NAME)
-ARM64_APP_BUNDLE = build/$(APP_NAME)-arm64.app
-X86_64_APP_BUNDLE = build/$(APP_NAME)-x86_64.app
+ARM64_APP_DIR = build/arm64
+X86_64_APP_DIR = build/x86_64
+ARM64_APP_BUNDLE = $(ARM64_APP_DIR)/$(APP_NAME).app
+X86_64_APP_BUNDLE = $(X86_64_APP_DIR)/$(APP_NAME).app
 
 .PHONY: all build test run app sign clean install zip cli install-cli uninstall-cli \
-        uninstall-helper download-caddy \
+        uninstall-helper download-caddy notarize staple notarize-arm64 notarize-x86_64 \
         build-arm64 build-x86_64 app-arm64 app-x86_64 zip-arm64 zip-x86_64 zip-all \
         cli-arm64 cli-x86_64
 
@@ -178,8 +186,50 @@ uninstall-helper:
 	@echo "Helper, CA, and /etc/hosts entries removed"
 
 zip: app
-	@cd build && zip -r $(APP_NAME).zip $(APP_NAME).app > /dev/null
+	@rm -f build/$(APP_NAME).zip
+	@cd build && ditto -c -k --sequesterRsrc --keepParent $(APP_NAME).app $(APP_NAME).zip
 	@echo "Created build/$(APP_NAME).zip"
+
+# Submit the universal .app to Apple's notary service, wait for a verdict,
+# staple the ticket onto the bundle, then re-zip so the distributed archive
+# includes the staple. Requires SIGN_IDENTITY to be a real "Developer ID
+# Application" cert (ad-hoc and Apple Development certs are rejected).
+# Run `xcrun notarytool store-credentials "$(NOTARY_PROFILE)"` once before
+# the first invocation.
+notarize: zip
+	@echo "Submitting build/$(APP_NAME).zip to Apple notary service (this can take several minutes)..."
+	@xcrun notarytool submit build/$(APP_NAME).zip --keychain-profile $(NOTARY_PROFILE) --wait
+	@$(MAKE) staple
+	@echo "Re-packaging stapled bundle..."
+	@rm -f build/$(APP_NAME).zip
+	@cd build && ditto -c -k --sequesterRsrc --keepParent $(APP_NAME).app $(APP_NAME).zip
+	@echo ""
+	@echo "Notarized + stapled $(APP_BUNDLE)"
+	@ls -lh build/$(APP_NAME).zip
+
+# Staple the notarization ticket onto the .app and verify Gatekeeper
+# acceptance. Run after a successful `notarytool submit ... --wait`.
+staple:
+	@xcrun stapler staple $(APP_BUNDLE)
+	@xcrun stapler validate $(APP_BUNDLE)
+	@spctl -a -vvv -t install $(APP_BUNDLE) || true
+
+# Per-arch notarize variants. Useful when shipping single-arch zips.
+notarize-arm64: zip-arm64
+	@xcrun notarytool submit build/$(APP_NAME)-arm64.zip --keychain-profile $(NOTARY_PROFILE) --wait
+	@xcrun stapler staple $(ARM64_APP_BUNDLE)
+	@xcrun stapler validate $(ARM64_APP_BUNDLE)
+	@rm -f build/$(APP_NAME)-arm64.zip
+	@cd $(ARM64_APP_DIR) && ditto -c -k --sequesterRsrc --keepParent $(APP_NAME).app ../$(APP_NAME)-arm64.zip
+	@echo "Notarized + stapled $(ARM64_APP_BUNDLE)"
+
+notarize-x86_64: zip-x86_64
+	@xcrun notarytool submit build/$(APP_NAME)-x86_64.zip --keychain-profile $(NOTARY_PROFILE) --wait
+	@xcrun stapler staple $(X86_64_APP_BUNDLE)
+	@xcrun stapler validate $(X86_64_APP_BUNDLE)
+	@rm -f build/$(APP_NAME)-x86_64.zip
+	@cd $(X86_64_APP_DIR) && ditto -c -k --sequesterRsrc --keepParent $(APP_NAME).app ../$(APP_NAME)-x86_64.zip
+	@echo "Notarized + stapled $(X86_64_APP_BUNDLE)"
 
 cli:
 	swift build -c release --arch arm64 --arch x86_64 --product $(CLI_NAME)
@@ -227,14 +277,18 @@ app-x86_64: build-x86_64
 	@touch $(X86_64_APP_BUNDLE)
 	@echo "Built $(X86_64_APP_BUNDLE) (Intel)"
 
+# Per-arch zip filenames carry the architecture (CloudTunnels-arm64.zip),
+# but the .app inside is always named $(APP_NAME).app so the install
+# instructions (`open /Applications/CloudTunnels.app`) work regardless
+# of which zip the user downloaded.
 zip-arm64: app-arm64
 	@rm -f build/$(APP_NAME)-arm64.zip
-	@cd build && ditto -c -k --sequesterRsrc --keepParent $(APP_NAME)-arm64.app $(APP_NAME)-arm64.zip
+	@cd $(ARM64_APP_DIR) && ditto -c -k --sequesterRsrc --keepParent $(APP_NAME).app ../$(APP_NAME)-arm64.zip
 	@echo "Created build/$(APP_NAME)-arm64.zip"
 
 zip-x86_64: app-x86_64
 	@rm -f build/$(APP_NAME)-x86_64.zip
-	@cd build && ditto -c -k --sequesterRsrc --keepParent $(APP_NAME)-x86_64.app $(APP_NAME)-x86_64.zip
+	@cd $(X86_64_APP_DIR) && ditto -c -k --sequesterRsrc --keepParent $(APP_NAME).app ../$(APP_NAME)-x86_64.zip
 	@echo "Created build/$(APP_NAME)-x86_64.zip"
 
 zip-all: zip-arm64 zip-x86_64

@@ -142,6 +142,10 @@ jobs:
             local app="$2"
             local label
             label="$(basename "$zip")"
+            # Compute the absolute zip output path before cd-ing, so
+            # ditto writes to build/CloudTunnels-arm64.zip rather than
+            # build/arm64/CloudTunnels-arm64.zip.
+            local zip_abs="$PWD/$zip"
             echo "[$label] submitting to notary..."
             xcrun notarytool submit "$zip" \
               --apple-id "$NOTARY_APPLE_ID" \
@@ -154,7 +158,7 @@ jobs:
             rm -f "$zip"
             ( cd "$(dirname "$app")" && \
               ditto -c -k --sequesterRsrc --keepParent \
-                "$(basename "$app")" "$(basename "$zip")" )
+                "$(basename "$app")" "$zip_abs" )
             echo "[$label] done."
           }
           submit_and_staple build/CloudTunnels.zip        build/CloudTunnels.app       & P1=$!

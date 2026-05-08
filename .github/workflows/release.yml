@@ -62,7 +62,32 @@ jobs:
           set -euo pipefail
           KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
           CERT_PATH="$RUNNER_TEMP/cert.p12"
-          echo -n "$P12_BASE64" | base64 --decode > "$CERT_PATH"
+
+          # Strip any trailing whitespace/newlines that might have been
+          # captured when pasting the password into the GH secret UI.
+          P12_PASSWORD="$(printf '%s' "$P12_PASSWORD" | tr -d '\r\n')"
+
+          # Decode .p12 and sanity-check it isn't empty/truncated.
+          printf '%s' "$P12_BASE64" | base64 --decode > "$CERT_PATH"
+          P12_SIZE=$(wc -c < "$CERT_PATH")
+          echo "Decoded .p12 is $P12_SIZE bytes."
+          if [ "$P12_SIZE" -lt 1000 ]; then
+            echo "::error::Decoded .p12 looks too small — secret MACOS_CERTIFICATE_P12_BASE64 may be truncated or mis-encoded."
+            exit 1
+          fi
+
+          # Verify the password against the .p12 BEFORE attempting the
+          # keychain import, so a wrong password produces a clear error
+          # instead of the cryptic "SecKeychainItemImport" failure.
+          # Keychain Access exports use legacy RC2-40-CBC; OpenSSL 3.x
+          # needs --legacy to read those.
+          if ! /usr/bin/openssl pkcs12 -in "$CERT_PATH" -nokeys -legacy \
+               -passin "env:P12_PASSWORD" >/dev/null 2>&1; then
+            echo "::error::Password rejected by openssl. Re-create the MACOS_CERTIFICATE_PASSWORD secret. Tip: avoid trailing whitespace; verify locally with:  openssl pkcs12 -in DeveloperID.p12 -nokeys -legacy -passin pass:'YOUR_PASSWORD'"
+            exit 1
+          fi
+          echo "Password accepted by openssl — proceeding to keychain import."
+
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"

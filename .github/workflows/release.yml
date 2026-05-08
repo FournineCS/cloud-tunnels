@@ -87,14 +87,21 @@ jobs:
           # Verify the password against the .p12 BEFORE attempting the
           # keychain import, so a wrong password produces a clear error
           # instead of the cryptic "SecKeychainItemImport" failure.
-          # Keychain Access exports use legacy RC2-40-CBC; OpenSSL 3.x
-          # needs --legacy to read those.
-          if ! /usr/bin/openssl pkcs12 -in "$CERT_PATH" -nokeys -legacy \
+          # Keychain Access exports use legacy RC2-40-CBC. Apple's
+          # /usr/bin/openssl on macos-15 runners is LibreSSL, which
+          # handles RC2 natively and doesn't accept -legacy. Homebrew /
+          # OpenSSL 3 needs -legacy. Try plain first, fall back to
+          # -legacy so this works regardless of which flavor is on PATH.
+          if /usr/bin/openssl pkcs12 -in "$CERT_PATH" -nokeys \
                -passin "env:P12_PASSWORD" >/dev/null 2>&1; then
-            echo "::error::Password rejected by openssl. The CI sha256 prefix above must match  printf '%s' 'YOUR_PASSWORD' | shasum -a 256 | cut -c1-12  on your machine. If they differ, the value pasted into MACOS_CERTIFICATE_PASSWORD is not what you typed (smart quotes, hidden character, paste truncation)."
+            echo "Password accepted by openssl (LibreSSL or OpenSSL 3 with modern .p12)."
+          elif /usr/bin/openssl pkcs12 -in "$CERT_PATH" -nokeys -legacy \
+               -passin "env:P12_PASSWORD" >/dev/null 2>&1; then
+            echo "Password accepted by openssl (OpenSSL 3 + -legacy)."
+          else
+            echo "::error::Password rejected by openssl. The CI sha256 prefix above must match  printf '%s' 'YOUR_PASSWORD' | shasum -a 256 | cut -c1-12  on your machine. If they differ, the value pasted into MACOS_CERTIFICATE_PASSWORD is not what you typed."
             exit 1
           fi
-          echo "Password accepted by openssl — proceeding to keychain import."
 
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"

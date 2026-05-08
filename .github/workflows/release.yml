@@ -63,9 +63,17 @@ jobs:
           KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
           CERT_PATH="$RUNNER_TEMP/cert.p12"
 
-          # Strip any trailing whitespace/newlines that might have been
-          # captured when pasting the password into the GH secret UI.
+          # Strip CR/LF (most common paste artifact). Spaces and tabs
+          # could be valid password chars, so leave them.
           P12_PASSWORD="$(printf '%s' "$P12_PASSWORD" | tr -d '\r\n')"
+
+          # Diagnostics that don't leak the password: length and a short
+          # SHA-256 prefix. Compute the same locally to compare:
+          #   printf '%s' 'YOUR_PASSWORD' | shasum -a 256 | cut -c1-12
+          PWD_LEN=${#P12_PASSWORD}
+          PWD_FP=$(printf '%s' "$P12_PASSWORD" | shasum -a 256 | cut -c1-12)
+          echo "Password length: $PWD_LEN"
+          echo "Password sha256 prefix: $PWD_FP"
 
           # Decode .p12 and sanity-check it isn't empty/truncated.
           printf '%s' "$P12_BASE64" | base64 --decode > "$CERT_PATH"
@@ -83,7 +91,7 @@ jobs:
           # needs --legacy to read those.
           if ! /usr/bin/openssl pkcs12 -in "$CERT_PATH" -nokeys -legacy \
                -passin "env:P12_PASSWORD" >/dev/null 2>&1; then
-            echo "::error::Password rejected by openssl. Re-create the MACOS_CERTIFICATE_PASSWORD secret. Tip: avoid trailing whitespace; verify locally with:  openssl pkcs12 -in DeveloperID.p12 -nokeys -legacy -passin pass:'YOUR_PASSWORD'"
+            echo "::error::Password rejected by openssl. The CI sha256 prefix above must match  printf '%s' 'YOUR_PASSWORD' | shasum -a 256 | cut -c1-12  on your machine. If they differ, the value pasted into MACOS_CERTIFICATE_PASSWORD is not what you typed (smart quotes, hidden character, paste truncation)."
             exit 1
           fi
           echo "Password accepted by openssl — proceeding to keychain import."

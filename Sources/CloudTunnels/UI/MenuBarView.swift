@@ -100,9 +100,11 @@ struct MenuBarView: View {
 
     private var brandHeader: some View {
         HStack(alignment: .center, spacing: 8) {
-            Text("FOURNINE")
-                .font(.system(size: 14, weight: .heavy))
-                .tracking(1.6)
+            BrandImages.brandHeaderLogo
+                .foregroundStyle(.primary)
+            Text("CLOUD TUNNELS")
+                .font(.system(size: 13, weight: .heavy))
+                .tracking(1.4)
                 .foregroundStyle(.primary)
             Spacer()
             Button(action: onOpenHelp) {

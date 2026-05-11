@@ -1,11 +1,19 @@
 import AppKit
 import SwiftUI
 
-/// Brand assets loaded from the SwiftPM resource bundle (`Bundle.module`).
+/// Brand assets loaded from the app bundle's `Contents/Resources/` directory.
 /// PNGs sourced from `Resources/Branding/MenuBarIcon.svg` (the SQV mark) and
 /// `Resources/Branding/AppIcon-source.png`. Both are rendered as **template**
 /// images so AppKit recolors them based on menu-bar / popover state instead of
 /// using the asset's literal pixel colors.
+///
+/// Loaded via `Bundle.main` rather than SwiftPM's generated `Bundle.module` —
+/// SPM's `Bundle.module` accessor for `.executableTarget` resolves to
+/// `Bundle.main.bundleURL.appendingPathComponent("CloudTunnels_CloudTunnels.bundle")`,
+/// which on an installed `.app` resolves to a sibling-of-Contents path that
+/// does not exist, causing a fatal crash at launch. Copying the PNGs directly
+/// into `Contents/Resources/` and reading via `Bundle.main` is the standard
+/// Mac-app resource pattern.
 enum BrandImages {
     /// SQV monogram used as the macOS menu-bar status item glyph.
     /// `MenuBarExtra` renders its label at the NSImage's *intrinsic* size and
@@ -29,7 +37,7 @@ enum BrandImages {
     }()
 
     private static func loadTemplate(named name: String, ext: String) -> NSImage {
-        guard let url = Bundle.module.url(forResource: name, withExtension: ext),
+        guard let url = Bundle.main.url(forResource: name, withExtension: ext),
               let image = NSImage(contentsOf: url) else {
             // Fall back to a SF Symbol so the UI never renders a void —
             // this only fires if the resource is missing from the bundle.

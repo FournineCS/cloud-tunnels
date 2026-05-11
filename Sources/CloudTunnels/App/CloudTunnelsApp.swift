@@ -45,7 +45,8 @@ struct CloudTunnelsApp: App {
                 .environmentObject(toasts)
                 .environmentObject(calendar)
         } label: {
-            Image(systemName: menuBarSymbol)
+            BrandImages.menuBarIcon
+                .opacity(menuBarActive ? 1.0 : 0.55)
         }
         .menuBarExtraStyle(.window)
 
@@ -83,13 +84,12 @@ struct CloudTunnelsApp: App {
         .defaultPosition(.center)
     }
 
-    private var menuBarSymbol: String {
-        let active = manager.statuses.values.contains { $0.isActive }
-        let hasError = manager.statuses.values.contains {
-            if case .error = $0 { return true } else { return false }
-        }
-        if hasError { return "cloud.fill" }
-        return active ? "cloud.fill" : "cloud"
+    /// Brighten the menu-bar mark when at least one tunnel is connected /
+    /// connecting, dim it when fully idle. Errors keep the bright state so
+    /// the badge dot drawn elsewhere stays the indicator-of-record for failure.
+    private var menuBarActive: Bool {
+        manager.statuses.values.contains { $0.isActive } ||
+        manager.statuses.values.contains { if case .error = $0 { return true } else { return false } }
     }
 
     private func activate() {

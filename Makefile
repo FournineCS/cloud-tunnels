@@ -135,6 +135,7 @@ app: build download-caddy
 	    echo "No vendored caddy; relying on system caddy at runtime."; \
 	fi
 	@cp Resources/Info.plist $(CONTENTS)/Info.plist
+	@cp Resources/AppIcon.icns $(RESOURCES_DIR)/AppIcon.icns
 	@cp Resources/LaunchDaemons/$(HELPER_BUNDLE_ID).plist $(LAUNCHDAEMONS_DIR)/
 	@touch $(APP_BUNDLE)
 	@$(MAKE) sign
@@ -259,6 +260,7 @@ app-arm64: build-arm64
 	@cp $(ARM64_BIN) $(ARM64_APP_BUNDLE)/Contents/MacOS/$(APP_NAME)
 	@cp $(ARM64_HELPER_BIN) $(ARM64_APP_BUNDLE)/Contents/MacOS/$(HELPER_NAME)
 	@cp Resources/Info.plist $(ARM64_APP_BUNDLE)/Contents/Info.plist
+	@cp Resources/AppIcon.icns $(ARM64_APP_BUNDLE)/Contents/Resources/AppIcon.icns
 	@cp Resources/LaunchDaemons/$(HELPER_BUNDLE_ID).plist $(ARM64_APP_BUNDLE)/Contents/Library/LaunchDaemons/
 	@codesign --force --options runtime --entitlements $(HELPER_ENTITLEMENTS) --sign "$(SIGN_IDENTITY)" $(ARM64_APP_BUNDLE)/Contents/MacOS/$(HELPER_NAME)
 	@codesign --force --options runtime --deep --entitlements $(APP_ENTITLEMENTS) --sign "$(SIGN_IDENTITY)" $(ARM64_APP_BUNDLE)
@@ -271,6 +273,7 @@ app-x86_64: build-x86_64
 	@cp $(X86_64_BIN) $(X86_64_APP_BUNDLE)/Contents/MacOS/$(APP_NAME)
 	@cp $(X86_64_HELPER_BIN) $(X86_64_APP_BUNDLE)/Contents/MacOS/$(HELPER_NAME)
 	@cp Resources/Info.plist $(X86_64_APP_BUNDLE)/Contents/Info.plist
+	@cp Resources/AppIcon.icns $(X86_64_APP_BUNDLE)/Contents/Resources/AppIcon.icns
 	@cp Resources/LaunchDaemons/$(HELPER_BUNDLE_ID).plist $(X86_64_APP_BUNDLE)/Contents/Library/LaunchDaemons/
 	@codesign --force --options runtime --entitlements $(HELPER_ENTITLEMENTS) --sign "$(SIGN_IDENTITY)" $(X86_64_APP_BUNDLE)/Contents/MacOS/$(HELPER_NAME)
 	@codesign --force --options runtime --deep --entitlements $(APP_ENTITLEMENTS) --sign "$(SIGN_IDENTITY)" $(X86_64_APP_BUNDLE)

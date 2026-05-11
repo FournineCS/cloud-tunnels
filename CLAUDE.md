@@ -46,10 +46,12 @@ Config: `~/Library/Application Support/CloudTunnels/config.json` (legacy read-on
 
 ## Architecture
 
-Three SwiftPM targets in `Package.swift`:
+Five SwiftPM targets in `Package.swift`:
 
 - **`TunnelCore`** (library) — provider-agnostic models, launchers, and helpers. Pure, Sendable-friendly. All shared logic lives here so both the GUI app and the CLI can reuse it.
-- **`CloudTunnels`** (executable) — SwiftUI menu-bar app. Depends on `TunnelCore`.
+- **`ProxyHelperShared`** (library) — XPC protocol + DTOs shared between the GUI and the privileged helper. Must stay free of GUI/AppKit imports so the helper can link it.
+- **`CloudTunnels`** (executable) — SwiftUI menu-bar app. Depends on `TunnelCore` + `ProxyHelperShared`.
+- **`CloudTunnelsProxyHelper`** (executable) — privileged launchd daemon. NSXPC listener bound to a Mach service; owns route-table edits, hosts-file edits, and the local CA / NIO server. Installed via `SMAppService.daemon(plistName:)` from the embedded `Contents/Library/LaunchDaemons/com.fourninecloud.cloud-tunnels.proxy-helper.plist`. First registration triggers the macOS auth dialog routing the user to System Settings → Login Items. See `Sources/CloudTunnels/Core/ProxyHelperInstaller.swift` for the install state machine and `Sources/CloudTunnels/Core/ProxyClient.swift` for the GUI-side XPC client.
 - **`ctun`** (executable) — ArgumentParser CLI. Reads the same `config.json` the GUI writes and dispatches tunnels through the same `LauncherFactory`.
 
 ### Provider extensibility (critical)

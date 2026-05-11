@@ -31,7 +31,11 @@ let package = Package(
                 "ProxyHelperShared",
                 .product(name: "X509", package: "swift-certificates"),
             ],
-            path: "Sources/CloudTunnels"
+            path: "Sources/CloudTunnels",
+            resources: [
+                .copy("Resources/MenuBarIconTemplate.png"),
+                .copy("Resources/BrandHeaderLogo.png"),
+            ]
         ),
         .executableTarget(
             name: "ctun",

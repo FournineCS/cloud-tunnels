@@ -1,322 +1,810 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CloudTunnels — macOS menu bar tunnels for GCP, AWS, Cloud SQL, SSH</title>
-<meta name="description" content="Native macOS menu bar app for managing port-forwarding tunnels across GCP IAP, AWS SSM, Cloud SQL Proxy, and SSH. Plus a built-in toolbox of 23+ utilities and a ctun CLI.">
-<meta property="og:title" content="CloudTunnels">
-<meta property="og:description" content="Native macOS menu bar app for managing port-forwarding tunnels across GCP IAP, AWS SSM, Cloud SQL Proxy, and SSH.">
-<meta property="og:image" content="screenshots/20-add-gcp-tunnel.png">
-<meta property="og:type" content="website">
-<meta name="theme-color" content="#0a0d18">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%98%81%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CloudTunnels — One menu bar. Every client's cloud.</title>
+<meta name="description" content="The macOS menu bar for freelance cloud engineers. GCP IAP, AWS SSM, Cloud SQL Proxy, and SSH tunnels across all your clients — without the CLI ceremony." />
+<meta name="theme-color" content="#0a0d18" />
+
+<meta property="og:type" content="website" />
+<meta property="og:title" content="CloudTunnels — One menu bar. Every client's cloud." />
+<meta property="og:description" content="The macOS menu bar for freelance cloud engineers. Manage GCP, AWS, SQL and SSH tunnels across every client without the CLI ceremony." />
+<meta property="og:image" content="screenshots/gcp.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="CloudTunnels — One menu bar. Every client's cloud." />
+<meta name="twitter:description" content="The macOS menu bar for freelance cloud engineers." />
+<meta name="twitter:image" content="screenshots/gcp.png" />
+
+<link rel="icon" type="image/png" href="logo.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
 <style>
   :root {
-    --bg: oklch(13% 0.02 270);
-    --bg-elev: oklch(18% 0.025 270);
-    --bg-card: oklch(22% 0.03 270);
-    --border: oklch(30% 0.03 270);
-    --border-soft: oklch(25% 0.025 270);
-    --text: oklch(96% 0.01 270);
-    --text-dim: oklch(72% 0.02 270);
-    --text-muted: oklch(55% 0.02 270);
-
-    --accent-gcp: oklch(70% 0.18 230);
-    --accent-aws: oklch(75% 0.16 60);
-    --accent-sql: oklch(70% 0.17 145);
-    --accent-ssh: oklch(70% 0.20 290);
-    --accent-tools: oklch(75% 0.22 340);
-    --accent-grad: linear-gradient(115deg, var(--accent-tools) 0%, var(--accent-ssh) 45%, var(--accent-gcp) 100%);
-
-    --text-hero: clamp(3rem, 1.5rem + 6vw, 6.5rem);
-    --text-display: clamp(2rem, 1rem + 3.5vw, 3.75rem);
-    --text-base: clamp(1rem, 0.92rem + 0.4vw, 1.125rem);
-
-    --space-section: clamp(4rem, 3rem + 4vw, 8rem);
-    --space-block: clamp(2rem, 1.5rem + 2vw, 4rem);
-
-    --duration-normal: 320ms;
-    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-
-    --radius-card: 1rem;
-    --radius-btn: 0.625rem;
+    --bg:        #0a0d18;
+    --bg-2:      #11141f;
+    --bg-3:      #161a27;
+    --surface:   #131724;
+    --surface-2: #1a1f2e;
+    --line:      rgba(255,255,255,0.07);
+    --line-2:    rgba(255,255,255,0.12);
+    --text:      #e8ecf3;
+    --text-dim:  rgba(232,236,243,0.62);
+    --text-dimmer: rgba(232,236,243,0.38);
+    --accent:    #5eead4;       /* electric cyan/mint */
+    --accent-2:  #22c55e;       /* signal green for "active" */
+    --warn:      #f59e0b;
+    --danger:    #ef4444;
+    --sans: "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --maxw: 1240px;
+    --pad:  24px;
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-lg: 16px;
+    --r-xl: 22px;
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
+    margin: 0;
     background: var(--bg);
     color: var(--text);
-    font-size: var(--text-base);
+    font-family: var(--sans);
+    font-size: 16px;
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
+    text-rendering: optimizeLegibility;
   }
-  img { max-width: 100%; height: auto; display: block; }
-  code { font-family: 'SF Mono', 'JetBrains Mono', Menlo, monospace; font-size: 0.9em; }
+  ::selection { background: var(--accent); color: #0a0d18; }
 
-  .container { width: min(1200px, 92%); margin-inline: auto; }
-  section { padding-block: var(--space-section); position: relative; }
+  a { color: inherit; text-decoration: none; }
+  img { display: block; max-width: 100%; }
+  button { font: inherit; cursor: pointer; }
+  code, kbd { font-family: var(--mono); }
 
-  /* header */
-  header.site {
-    position: sticky; top: 0; z-index: 100;
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
-    background: oklch(13% 0.02 270 / 0.72);
-    border-bottom: 1px solid var(--border-soft);
+  .container {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 0 var(--pad);
   }
-  header .row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding-block: 1rem;
+
+  /* ─── NAV ─────────────────────────────────────────────────────── */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10,13,24,0.78);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-inner {
+    display: flex; align-items: center; gap: 28px;
+    padding: 14px var(--pad);
+    max-width: var(--maxw); margin: 0 auto;
   }
   .brand {
-    font-weight: 800; letter-spacing: -0.02em; font-size: 1.05rem;
-    background: var(--accent-grad);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
+    display: inline-flex; align-items: center; gap: 10px;
+    font-weight: 600; letter-spacing: -0.01em;
   }
-  nav.primary a {
-    color: var(--text-dim); text-decoration: none;
-    margin-left: 1.5rem; font-size: 0.95rem; font-weight: 500;
-    transition: color var(--duration-normal) var(--ease-out-expo);
+  .brand img {
+    width: 28px; height: 28px;
+    filter: brightness(1) saturate(0);
+    object-fit: contain;
   }
-  nav.primary a:hover { color: var(--text); }
+  .brand-name { font-size: 15px; }
+  .brand-sub  { font-size: 11px; color: var(--text-dimmer); font-family: var(--mono); }
+  .nav-links {
+    display: flex; gap: 24px;
+    font-size: 14px; color: var(--text-dim);
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-spacer { flex: 1; }
+  .nav-cta {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 999px;
+    background: var(--surface-2);
+    border: 1px solid var(--line-2);
+    font-size: 13px; font-weight: 500;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .nav-cta:hover { background: var(--bg-3); border-color: rgba(255,255,255,0.2); }
+  @media (max-width: 760px) {
+    .nav-links { display: none; }
+  }
 
-  /* hero */
-  .hero { padding-top: 5rem; padding-bottom: 3rem; }
-  .hero .container {
-    display: grid;
-    grid-template-columns: 1.15fr 1fr;
-    gap: clamp(2rem, 4vw, 5rem);
-    align-items: center;
+  /* ─── HERO ────────────────────────────────────────────────────── */
+  .hero {
+    padding: 84px 0 56px;
+    position: relative;
+    overflow: hidden;
   }
   .hero::before {
-    content: ''; position: absolute; inset: 0; pointer-events: none;
-    background:
-      radial-gradient(ellipse 50% 60% at 85% 20%, oklch(38% 0.18 320 / 0.35), transparent 70%),
-      radial-gradient(ellipse 60% 70% at 10% 90%, oklch(32% 0.15 230 / 0.28), transparent 70%);
+    /* subtle radial accent glow */
+    content: ""; position: absolute; inset: -20% 0 auto -10%;
+    height: 600px;
+    background: radial-gradient(60% 60% at 30% 0%, rgba(94,234,212,0.10), transparent 70%);
+    pointer-events: none; z-index: 0;
   }
+  .hero-inner { position: relative; z-index: 1; }
   .eyebrow {
-    text-transform: uppercase; letter-spacing: 0.22em; font-size: 0.75rem;
-    color: var(--text-muted); font-weight: 600;
-    margin-bottom: 1.5rem;
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dim); letter-spacing: 0.02em;
+    padding: 5px 11px; border-radius: 999px;
+    border: 1px solid var(--line-2);
+    background: rgba(255,255,255,0.02);
+    margin-bottom: 22px;
+  }
+  .eyebrow .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent-2);
+    box-shadow: 0 0 8px var(--accent-2);
   }
   .hero h1 {
-    font-size: var(--text-hero); font-weight: 800;
-    letter-spacing: -0.04em; line-height: 0.95;
-    margin-bottom: 1.5rem;
+    font-size: clamp(40px, 7vw, 76px);
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    font-weight: 600;
+    margin: 0 0 24px;
+    max-width: 16ch;
+    text-wrap: balance;
   }
-  .hero h1 .grad {
-    background: var(--accent-grad);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent);
   }
-  .lead {
-    font-size: clamp(1.05rem, 1rem + 0.35vw, 1.25rem);
+  .hero-sub {
+    font-size: clamp(16px, 1.5vw, 19px);
     color: var(--text-dim);
-    max-width: 50ch;
-    margin-bottom: 2.25rem;
+    max-width: 56ch;
+    margin: 0 0 36px;
+    text-wrap: pretty;
   }
-  .cta { display: flex; gap: 0.875rem; flex-wrap: wrap; }
-  .btn {
-    display: inline-flex; align-items: center; gap: 0.5rem;
-    padding: 0.875rem 1.5rem; border-radius: var(--radius-btn);
-    font-weight: 600; font-size: 0.95rem;
-    text-decoration: none; cursor: pointer;
-    border: 1px solid transparent;
-    transition: transform var(--duration-normal) var(--ease-out-expo),
-                background var(--duration-normal) var(--ease-out-expo),
-                border-color var(--duration-normal) var(--ease-out-expo);
-    will-change: transform;
+  .hero-ctas {
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 12px;
   }
-  .btn-primary { background: var(--text); color: var(--bg); }
-  .btn-primary:hover { transform: translateY(-2px); }
-  .btn-ghost { background: transparent; color: var(--text); border-color: var(--border); }
-  .btn-ghost:hover { background: var(--bg-elev); transform: translateY(-2px); border-color: oklch(40% 0.05 270); }
+  .install-cmd {
+    display: inline-flex; align-items: center; gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    padding: 4px 4px 4px 18px;
+    font-family: var(--mono); font-size: 14px;
+    transition: border-color 0.15s;
+  }
+  .install-cmd:hover { border-color: rgba(94,234,212,0.4); }
+  .install-cmd .prompt { color: var(--accent); margin-right: 8px; }
+  .install-cmd code { color: var(--text); }
+  .install-cmd .copy-btn {
+    margin-left: 14px;
+    background: var(--bg-3);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    padding: 8px 14px; border-radius: 999px;
+    font-family: var(--mono); font-size: 12px;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all 0.15s;
+  }
+  .install-cmd .copy-btn:hover { color: var(--text); background: var(--surface-2); }
+  .install-cmd .copy-btn.copied {
+    color: var(--accent-2); border-color: var(--accent-2);
+  }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 18px; border-radius: 999px;
+    border: 1px solid var(--line-2);
+    color: var(--text); background: transparent;
+    font-size: 14px; font-weight: 500;
+    transition: all 0.15s;
+  }
+  .btn-secondary:hover { border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.03); }
+  .hero-meta {
+    margin-top: 24px;
+    display: flex; gap: 22px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dimmer);
+  }
+  .hero-meta span { display: inline-flex; align-items: center; gap: 6px; }
 
+  /* hero visual: tilted screenshot */
+  .hero-visual {
+    margin-top: 64px;
+    perspective: 1800px;
+    perspective-origin: 50% 100%;
+  }
   .hero-shot {
     position: relative;
-    justify-self: center;
-    max-width: 460px;
+    max-width: 380px;
+    margin: 0 auto;
+    transform: rotateX(8deg) rotateY(-3deg) rotateZ(-1.5deg);
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(.2,.7,.2,1);
   }
+  .hero-shot:hover { transform: rotateX(2deg) rotateY(0) rotateZ(0); }
   .hero-shot img {
-    border-radius: var(--radius-card);
+    width: 100%; height: auto; display: block;
+    border-radius: 16px;
+    border: 1px solid var(--line-2);
     box-shadow:
-      0 30px 90px -25px oklch(0% 0 0 / 0.7),
-      0 0 0 1px var(--border);
+      0 50px 80px -30px rgba(0,0,0,0.75),
+      0 20px 40px -10px rgba(0,0,0,0.5),
+      0 0 0 1px rgba(255,255,255,0.04) inset;
   }
-  .hero-shot::after {
-    content: ''; position: absolute; inset: -12% -8% -8% -8%;
-    background: var(--accent-grad); filter: blur(80px); opacity: 0.18;
-    z-index: -1; pointer-events: none;
-    border-radius: 50%;
+  .hero-shot::before {
+    content: ""; position: absolute; inset: -40% -20% -40% -20%;
+    background: radial-gradient(50% 50% at 50% 50%, rgba(94,234,212,0.18), transparent 70%);
+    z-index: -1; filter: blur(40px);
+    pointer-events: none;
   }
-
-  /* badges row */
-  .badges {
-    margin-top: 2rem;
-    display: flex; gap: 1.25rem; flex-wrap: wrap;
-    color: var(--text-muted); font-size: 0.85rem;
-    align-items: center;
+  @media (min-width: 920px) {
+    .hero { padding-top: 96px; }
+    .hero-layout {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 64px;
+      align-items: center;
+    }
+    .hero-visual { margin-top: 0; }
+    .hero-shot { max-width: 360px; margin: 0 auto 0 auto; }
   }
-  .badges span { display: inline-flex; align-items: center; gap: 0.4rem; }
-  .badges .dot { width: 0.4rem; height: 0.4rem; border-radius: 50%; background: var(--accent-sql); }
-
-  /* section heads */
-  .section-head { max-width: 64ch; margin-bottom: var(--space-block); }
-  .section-head h2 {
-    font-size: var(--text-display); font-weight: 800;
-    letter-spacing: -0.03em; line-height: 1.05;
-    margin-bottom: 1rem;
-  }
-  .section-head p { color: var(--text-dim); font-size: 1.125rem; }
-
-  /* providers */
-  .providers-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 1.25rem;
-  }
-  .provider-card {
-    background: var(--bg-elev);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-card);
-    overflow: hidden;
-    transition: transform var(--duration-normal) var(--ease-out-expo),
-                border-color var(--duration-normal) var(--ease-out-expo);
-  }
-  .provider-card:hover {
-    transform: translateY(-4px);
-    border-color: oklch(38% 0.05 270);
-  }
-  .provider-card .shot {
-    aspect-ratio: 4 / 5;
-    overflow: hidden;
-    background: oklch(15% 0.02 270);
-    border-bottom: 1px solid var(--border-soft);
-  }
-  .provider-card .shot img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
-  .provider-card .body { padding: 1.25rem 1.5rem 1.5rem; }
-  .provider-card h3 {
-    font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em;
-    margin-bottom: 0.5rem;
-    display: flex; align-items: center; gap: 0.5rem;
-  }
-  .provider-card h3 .dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; }
-  .provider-card.gcp h3 .dot { background: var(--accent-gcp); }
-  .provider-card.aws h3 .dot { background: var(--accent-aws); }
-  .provider-card.sql h3 .dot { background: var(--accent-sql); }
-  .provider-card.ssh h3 .dot { background: var(--accent-ssh); }
-  .provider-card p { color: var(--text-dim); font-size: 0.92rem; line-height: 1.5; }
-  .provider-card code { color: var(--text); background: oklch(25% 0.03 270); padding: 0.05rem 0.35rem; border-radius: 0.25rem; }
-
-  /* feature grid */
-  .feature-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.25rem;
-  }
-  .feature {
-    padding: 1.5rem;
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-card);
-    background: var(--bg-elev);
-    transition: border-color var(--duration-normal) var(--ease-out-expo),
-                background var(--duration-normal) var(--ease-out-expo);
-  }
-  .feature:hover { border-color: oklch(38% 0.05 270); background: var(--bg-card); }
-  .feature h3 {
-    font-size: 1.1rem; font-weight: 700; letter-spacing: -0.01em;
-    margin-bottom: 0.5rem;
-  }
-  .feature p { color: var(--text-dim); font-size: 0.95rem; }
-  .feature code { color: var(--text); background: oklch(25% 0.03 270); padding: 0.05rem 0.35rem; border-radius: 0.25rem; }
-
-  /* tools */
-  .tools-layout {
-    display: grid;
-    grid-template-columns: minmax(280px, 360px) 1fr;
-    gap: clamp(2rem, 4vw, 4rem);
-    align-items: start;
-  }
-  .tools-shot {
-    position: sticky; top: 6rem;
-    border-radius: var(--radius-card);
-    box-shadow:
-      0 20px 60px -10px oklch(0% 0 0 / 0.55),
-      0 0 0 1px var(--border);
-  }
-  .tool-categories {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-  }
-  .tool-cat {
-    background: var(--bg-elev); border: 1px solid var(--border-soft);
-    border-radius: 0.75rem; padding: 1.1rem 1.25rem;
-  }
-  .tool-cat h4 {
-    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.18em;
-    color: var(--accent-tools); margin-bottom: 0.75rem; font-weight: 700;
-  }
-  .tool-cat ul { list-style: none; }
-  .tool-cat li {
-    color: var(--text-dim); font-size: 0.875rem;
-    padding-block: 0.2rem;
+  @media (min-width: 1100px) {
+    .hero-shot { max-width: 400px; }
   }
 
-  /* code blocks */
-  pre {
-    background: oklch(11% 0.02 270);
-    border: 1px solid var(--border-soft);
-    border-radius: 0.75rem;
-    padding: 1.25rem 1.5rem;
-    overflow-x: auto;
-    font-size: 0.85rem;
-    line-height: 1.7;
+  /* ─── SECTION SCAFFOLD ────────────────────────────────────────── */
+  section { padding: 80px 0; position: relative; }
+  @media (min-width: 768px) { section { padding: 100px 0; } }
+  .section-eyebrow {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dim); letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-eyebrow .num { color: var(--accent); font-weight: 600; }
+  .section-title {
+    font-size: clamp(28px, 4.5vw, 48px);
+    line-height: 1.05; letter-spacing: -0.025em;
+    font-weight: 600; margin: 0 0 18px;
+    max-width: 22ch; text-wrap: balance;
+  }
+  .section-sub {
+    font-size: clamp(15px, 1.5vw, 17px);
     color: var(--text-dim);
-  }
-  pre code { color: var(--text); }
-  pre .com { color: var(--text-muted); }
-  pre .key { color: var(--accent-tools); }
-
-  .install-cols {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-  }
-  .install-cols h3 {
-    font-size: 1rem; margin-bottom: 0.875rem;
-    color: var(--text-dim); font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.12em;
+    max-width: 60ch; margin: 0 0 48px;
+    text-wrap: pretty;
   }
 
-  /* CLI section */
-  .cli-row {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 3rem; align-items: center;
+  /* ─── FREELANCER MATH ─────────────────────────────────────────── */
+  .math {
+    background: linear-gradient(180deg, var(--bg-2), var(--bg));
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .math-grid {
+    display: grid;
+    gap: 32px;
+  }
+  @media (min-width: 920px) {
+    .math-grid { grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+  }
+  .math-callout {
+    background: var(--surface);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-lg);
+    padding: 28px 30px;
+    font-size: 17px;
+    line-height: 1.55;
+    color: var(--text);
+  }
+  .math-callout strong { color: var(--accent); font-weight: 600; }
+  .calc {
+    background: var(--surface);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-lg);
+    padding: 28px;
+  }
+  .calc-row { margin-bottom: 22px; }
+  .calc-row:last-of-type { margin-bottom: 28px; }
+  .calc-label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .calc-label-text {
+    font-family: var(--mono); font-size: 13px;
+    color: var(--text-dim); letter-spacing: 0.02em;
+  }
+  .calc-label-value {
+    font-family: var(--mono); font-size: 16px;
+    color: var(--text); font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .calc-row input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px;
+    background: var(--bg-3);
+    border-radius: 999px;
+    outline: none;
+    cursor: pointer;
+  }
+  .calc-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--bg);
+    box-shadow: 0 0 0 1px var(--accent);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .calc-row input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
+  .calc-row input[type="range"]::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); border: 3px solid var(--bg);
+    cursor: pointer;
+  }
+  .calc-result {
+    border-top: 1px dashed var(--line-2);
+    padding-top: 22px;
+  }
+  .calc-result-label {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dim); letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  .calc-result-num {
+    font-size: clamp(40px, 6vw, 56px);
+    font-weight: 600; letter-spacing: -0.03em;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .calc-result-note {
+    font-size: 13px; color: var(--text-dim);
+    margin-top: 10px; font-family: var(--mono);
   }
 
-  /* footer */
-  footer.site {
-    border-top: 1px solid var(--border-soft);
-    padding-block: 2.5rem;
-    color: var(--text-muted); font-size: 0.9rem;
+  /* ─── WHO THIS IS FOR ─────────────────────────────────────────── */
+  .personas { display: grid; gap: 20px; }
+  @media (min-width: 760px)  { .personas { grid-template-columns: repeat(3, 1fr); } }
+  .persona {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 28px;
+    transition: border-color 0.2s, transform 0.2s;
   }
-  footer.site .row {
+  .persona:hover { border-color: var(--line-2); transform: translateY(-2px); }
+  .persona-tag {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--accent); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 16px;
+    display: inline-block;
+  }
+  .persona h3 {
+    font-size: 20px; font-weight: 600;
+    letter-spacing: -0.015em; margin: 0 0 14px;
+  }
+  .persona-pain {
+    color: var(--text-dim); font-size: 14px;
+    margin: 0 0 18px; line-height: 1.55;
+  }
+  .persona-solve {
+    padding-top: 14px;
+    border-top: 1px dashed var(--line-2);
+    color: var(--text); font-size: 14px;
+    line-height: 1.5;
+  }
+  .persona-solve::before {
+    content: "→ "; color: var(--accent); font-weight: 600;
+  }
+
+  /* ─── PROVIDERS ───────────────────────────────────────────────── */
+  .providers { display: grid; gap: 24px; }
+  @media (min-width: 820px) { .providers { grid-template-columns: 1fr 1fr; } }
+  .provider {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    transition: border-color 0.2s;
+  }
+  .provider:hover { border-color: var(--line-2); }
+  .provider-head {
+    padding: 22px 24px 14px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .provider-num {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--accent); font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+  .provider-title {
+    font-size: 22px; font-weight: 600;
+    letter-spacing: -0.01em; margin: 0;
+  }
+  .provider-cmd {
+    margin-left: auto;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dimmer);
+    padding: 4px 9px; border-radius: 4px;
+    background: var(--bg-3);
+    white-space: nowrap;
+  }
+  .provider-desc {
+    padding: 0 24px 14px;
+    color: var(--text-dim); font-size: 14px;
+    line-height: 1.55;
+  }
+  .provider-diff {
+    padding: 0 24px 18px;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text);
+  }
+  .provider-diff::before {
+    content: "// "; color: var(--accent);
+  }
+  .provider-shot {
+    background: linear-gradient(155deg, #1e2632 0%, #141b25 60%, #0d1820 100%);
+    padding: 18px;
+    border-top: 1px solid var(--line);
+    display: flex; justify-content: center;
+  }
+  .provider-shot img {
+    width: 100%; max-width: 320px;
+    border-radius: 10px;
+    box-shadow: 0 20px 40px -15px rgba(0,0,0,0.6);
+  }
+  @media (max-width: 520px) {
+    .provider-head { flex-wrap: wrap; }
+    .provider-cmd { margin-left: 0; }
+  }
+
+  /* ─── FEATURES ────────────────────────────────────────────────── */
+  .features { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+  @media (min-width: 640px) { .features { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 980px) { .features { grid-template-columns: repeat(3, 1fr); } }
+  .feature {
+    background: var(--bg);
+    padding: 30px 28px;
+  }
+  .feature-num {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--accent); font-weight: 600;
+    letter-spacing: 0.08em; margin-bottom: 18px;
+  }
+  .feature h3 {
+    font-size: 18px; font-weight: 600;
+    letter-spacing: -0.015em; margin: 0 0 10px;
+  }
+  .feature p {
+    color: var(--text-dim); font-size: 14px;
+    line-height: 1.55; margin: 0;
+  }
+  .feature-time {
+    margin-top: 14px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--accent-2); letter-spacing: 0.04em;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .feature-time::before {
+    content: ""; width: 5px; height: 5px;
+    border-radius: 50%; background: currentColor;
+  }
+
+  /* ─── TOOLS ───────────────────────────────────────────────────── */
+  .tools-shell {
+    background: linear-gradient(155deg, #1e2632 0%, #141b25 60%, #0d1820 100%);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-xl);
+    padding: 24px;
+    box-shadow: 0 40px 80px -30px rgba(0,0,0,0.6);
+  }
+  .tools-shell-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 4px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 18px;
+  }
+  .tools-shell-head .wordmark {
+    font-weight: 800; letter-spacing: 0.18em; font-size: 13px;
+  }
+  .tools-tab-strip {
+    display: flex; gap: 4px; margin-left: 14px;
+    font-family: var(--mono); font-size: 12px;
+    overflow-x: auto;
+  }
+  .tools-tab {
+    padding: 6px 10px; border-radius: 8px;
+    color: rgba(255,255,255,0.55);
+    white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .tools-tab.active {
+    background: #ec4899; color: #0d1820; font-weight: 700;
+  }
+  .tools-groups { display: grid; gap: 22px; }
+  .tools-group-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim); letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .tools-group-title::before {
+    content: ""; width: 12px; height: 1px; background: var(--accent);
+  }
+  .tools-group-title-count {
+    margin-left: auto;
+    color: var(--text-dimmer);
+  }
+  .tools-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+  }
+  .tools-tile {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 14px;
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--text);
+    display: flex; align-items: center; gap: 10px;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .tools-tile:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.12);
+  }
+  .tools-tile svg {
+    width: 18px; height: 18px; flex-shrink: 0;
+    color: var(--accent);
+  }
+
+  /* ─── COMPARISON ──────────────────────────────────────────────── */
+  .compare {
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .compare-table { width: 100%; border-collapse: collapse; }
+  .compare-table th,
+  .compare-table td {
+    padding: 16px 18px;
+    text-align: left;
+    font-size: 14px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: middle;
+  }
+  .compare-table th {
+    background: var(--bg-2);
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim); letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table td:first-child {
+    color: var(--text-dim); font-size: 13px;
+    width: 35%;
+  }
+  .compare-table th:last-child { background: rgba(94,234,212,0.06); color: var(--accent); }
+  .compare-table td.col-ct {
+    background: rgba(94,234,212,0.03);
+    color: var(--text);
+  }
+  .check, .cross, .partial {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--mono); font-size: 12px;
+  }
+  .check::before {
+    content: ""; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); color: var(--bg);
+    display: inline-flex; align-items: center; justify-content: center;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M4 8.5l2.5 2.5L12 5.5' stroke='%230a0d18' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  }
+  .cross::before {
+    content: ""; width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M5 5l6 6M11 5l-6 6' stroke='%23e8ecf3' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>");
+    opacity: 0.5;
+  }
+  .partial::before {
+    content: ""; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--warn);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M3 8h10' stroke='%230a0d18' stroke-width='2' fill='none' stroke-linecap='round'/></svg>");
+  }
+  @media (max-width: 600px) {
+    .compare-table { font-size: 12px; }
+    .compare-table th, .compare-table td { padding: 12px 10px; }
+    .compare-table td:first-child { width: auto; }
+  }
+
+  /* ─── INSTALL ─────────────────────────────────────────────────── */
+  .install-block {
+    background: var(--surface);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-lg);
+    padding: 36px;
+  }
+  .install-cmd-large {
+    background: var(--bg-2);
+    border: 1px solid var(--line-2);
+    border-radius: 12px;
+    padding: 22px 24px;
+    display: flex; align-items: center; gap: 14px;
+    font-family: var(--mono);
+    font-size: clamp(13px, 1.8vw, 16px);
+    margin-bottom: 22px;
+  }
+  .install-cmd-large .prompt { color: var(--accent); font-weight: 600; }
+  .install-cmd-large code { flex: 1; color: var(--text); overflow-x: auto; white-space: nowrap; }
+  .install-cmd-large .copy-btn {
+    flex-shrink: 0;
+    background: var(--bg-3); color: var(--text-dim);
+    border: 1px solid var(--line-2);
+    padding: 8px 14px; border-radius: 8px;
+    font: 500 12px/1 var(--mono); letter-spacing: 0.04em;
+    transition: all 0.15s;
+  }
+  .install-cmd-large .copy-btn:hover { color: var(--text); background: var(--surface-2); }
+  .install-cmd-large .copy-btn.copied { color: var(--accent-2); border-color: var(--accent-2); }
+
+  details.source {
+    margin-top: 8px;
+    border-top: 1px dashed var(--line-2);
+    padding-top: 18px;
+  }
+  details.source summary {
+    font-family: var(--mono); font-size: 13px;
+    color: var(--text-dim); cursor: pointer;
+    list-style: none;
+    display: inline-flex; align-items: center; gap: 8px;
+    user-select: none;
+  }
+  details.source summary::-webkit-details-marker { display: none; }
+  details.source summary::before {
+    content: "▸"; transition: transform 0.15s;
+    color: var(--text-dimmer);
+  }
+  details.source[open] summary::before { transform: rotate(90deg); }
+  details.source summary:hover { color: var(--text); }
+  details.source pre {
+    margin: 18px 0 0;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    font-family: var(--mono); font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+  }
+
+  .terminal {
+    margin-top: 32px;
+    background: #0a0d12;
+    border: 1px solid var(--line-2);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.5);
+  }
+  .terminal-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 11px 14px;
+    background: #13171d;
+    border-bottom: 1px solid var(--line);
+  }
+  .terminal-bar .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .terminal-bar .dot.r { background: #ff5f56; }
+  .terminal-bar .dot.y { background: #ffbd2e; }
+  .terminal-bar .dot.g { background: #27c93f; }
+  .terminal-bar .title {
+    flex: 1; text-align: center;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dimmer);
+  }
+  .terminal-bar .title-spacer { width: 50px; }
+  .terminal-body {
+    padding: 22px 24px;
+    font-family: var(--mono); font-size: 13.5px;
+    line-height: 1.75;
+    color: var(--text);
+    overflow-x: auto;
+  }
+  .terminal-body .prompt { color: var(--accent); user-select: none; }
+  .terminal-body .comment { color: var(--text-dimmer); }
+  .terminal-body .ok { color: var(--accent-2); }
+
+  /* ─── SOCIAL ──────────────────────────────────────────────────── */
+  .social {
+    background: linear-gradient(180deg, var(--bg), var(--bg-2));
+    border-top: 1px solid var(--line);
+  }
+  .social-grid {
+    display: grid; gap: 20px;
+  }
+  @media (min-width: 760px) { .social-grid { grid-template-columns: 1fr 1fr; } }
+  .badge-card {
+    background: var(--surface);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-lg);
+    padding: 28px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .badge-card-title {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dim); letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .badge-card img { height: 28px; width: auto; }
+  .quote-slot {
+    background: var(--surface);
+    border: 1px dashed var(--line-2);
+    border-radius: var(--r-lg);
+    padding: 28px;
+    color: var(--text-dimmer);
+    font-family: var(--mono); font-size: 13px;
+    min-height: 140px;
+    display: flex; flex-direction: column; gap: 10px;
+    justify-content: center;
+  }
+  .quote-slot .qmark { font-size: 36px; color: var(--text-dimmer); line-height: 0.8; opacity: 0.4; }
+  .quote-slot .qsrc { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+
+  /* ─── FOOTER ──────────────────────────────────────────────────── */
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 44px 0 60px;
+    background: var(--bg);
+  }
+  .footer-inner {
+    display: grid; gap: 24px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 720px) {
+    .footer-inner { grid-template-columns: 2fr 1fr 1fr 1fr; }
+  }
+  .footer-brand p {
+    color: var(--text-dim); font-size: 13px;
+    margin: 10px 0 0; max-width: 38ch;
+    line-height: 1.55;
+  }
+  .footer-col-title {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dimmer); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 14px;
+  }
+  .footer-col ul { list-style: none; margin: 0; padding: 0; }
+  .footer-col li { margin-bottom: 8px; }
+  .footer-col a {
+    color: var(--text-dim); font-size: 14px;
+    transition: color 0.15s;
+  }
+  .footer-col a:hover { color: var(--text); }
+  .footer-bottom {
+    margin-top: 36px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
     display: flex; justify-content: space-between; align-items: center;
-    flex-wrap: wrap; gap: 1rem;
+    gap: 16px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dimmer);
   }
-  footer.site a { color: var(--text-dim); text-decoration: none; }
-  footer.site a:hover { color: var(--text); }
-
-  /* responsive */
-  @media (max-width: 900px) {
-    .hero .container { grid-template-columns: 1fr; }
-    .hero-shot { order: -1; max-width: 360px; }
-    .tools-layout { grid-template-columns: 1fr; }
-    .tools-shot { position: static; max-width: 360px; margin: 0 auto; }
-    .install-cols, .cli-row { grid-template-columns: 1fr; }
-    nav.primary a { margin-left: 1rem; font-size: 0.875rem; }
+  .armadillo-mark {
+    width: 22px; height: 22px;
+    object-fit: contain;
+    opacity: 0.4;
+    filter: brightness(0) invert(1);
   }
 
+  /* ─── A11Y / MOTION ───────────────────────────────────────────── */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.01ms !important;
@@ -324,203 +812,647 @@
       scroll-behavior: auto !important;
     }
   }
+  /* Reveal-on-scroll */
+  .reveal {
+    opacity: 0; transform: translateY(16px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* Focus styles */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
 </style>
 </head>
 <body>
 
-<header class="site">
-  <div class="container row">
-    <div class="brand">CloudTunnels</div>
-    <nav class="primary">
+<!-- ─── NAV ─────────────────────────────────────────────────────────── -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#top" class="brand" aria-label="CloudTunnels home">
+      <img src="logo.png" alt="" />
+      <span class="brand-name">CloudTunnels</span>
+      <span class="brand-sub">by Fournine</span>
+    </a>
+    <div class="nav-links">
+      <a href="#math">Math</a>
       <a href="#providers">Providers</a>
       <a href="#features">Features</a>
       <a href="#tools">Tools</a>
       <a href="#install">Install</a>
-      <a href="https://github.com/FournineCS/cloud-tunnels">GitHub →</a>
-    </nav>
+    </div>
+    <div class="nav-spacer"></div>
+    <a class="nav-cta" href="https://github.com/FournineCS/cloud-tunnels" target="_blank" rel="noopener">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.5 15.6c.4.1.5-.2.5-.4v-1.4c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.2 1.9.9 2.4.7.1-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-3.9 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8.6-.2 1.3-.3 2-.3s1.4.1 2 .3c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.5.8 1.2.8 2.1 0 3-1.8 3.7-3.6 3.9.3.2.5.7.5 1.4v2c0 .2.1.5.5.4A8 8 0 0 0 8 0Z"/></svg>
+      GitHub
+    </a>
   </div>
-</header>
+</nav>
 
+<a id="top"></a>
+
+<!-- ─── HERO ────────────────────────────────────────────────────────── -->
 <section class="hero">
-  <div class="container">
-    <div>
-      <div class="eyebrow">Native macOS · Swift · Open Source</div>
-      <h1>One menu bar.<br><span class="grad">Every tunnel.</span></h1>
-      <p class="lead">Manage GCP IAP, AWS SSM, Cloud SQL Proxy, and SSH port-forwarding tunnels from a single menu bar app — with auto-reconnect, multi-account auth, kubeconfig auto-patching, and a <code>ctun</code> CLI.</p>
-      <div class="cta">
-        <a href="https://github.com/FournineCS/cloud-tunnels" class="btn btn-primary">View on GitHub</a>
-        <a href="#install" class="btn btn-ghost">Install</a>
+  <div class="container hero-inner">
+    <div class="hero-layout">
+      <div>
+        <div class="eyebrow">
+          <span class="dot"></span>
+          <span>Native macOS · Swift · Open source</span>
+        </div>
+        <h1>One menu bar.<br/>Every <em>client's</em> cloud.</h1>
+        <p class="hero-sub">
+          The macOS menu bar for freelance cloud engineers and independent DevOps consultants. Manage GCP IAP, AWS SSM, Cloud SQL Proxy and SSH tunnels across every client account — without the CLI ceremony, re-auth dance, or alt-tab tax.
+        </p>
+
+        <div class="hero-ctas">
+          <div class="install-cmd" id="hero-install">
+            <span class="prompt">$</span>
+            <code id="hero-install-code">brew install fourninecs/tap/cloudtunnels</code>
+            <button class="copy-btn" type="button" data-copy="brew install fourninecs/tap/cloudtunnels" aria-label="Copy install command">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="4" y="4" width="9" height="9" rx="1.5"/><path d="M11 4V3a1.5 1.5 0 0 0-1.5-1.5h-6A1.5 1.5 0 0 0 2 3v6A1.5 1.5 0 0 0 3.5 10.5H4"/></svg>
+              <span>Copy</span>
+            </button>
+          </div>
+          <a class="btn-secondary" href="https://github.com/FournineCS/cloud-tunnels" target="_blank" rel="noopener">
+            View on GitHub
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 11l6-6M6 5h5v5"/></svg>
+          </a>
+        </div>
+
+        <div class="hero-meta">
+          <span>macOS 13+</span>
+          <span>·</span>
+          <span>Universal binary</span>
+          <span>·</span>
+          <span>MIT-licensed</span>
+        </div>
       </div>
-      <div class="badges">
-        <span><span class="dot"></span>macOS 13+</span>
-        <span><span class="dot"></span>Universal binary</span>
-        <span><span class="dot"></span>365 unit tests</span>
+
+      <div class="hero-visual">
+        <div class="hero-shot">
+          <img src="screenshots/gcp.png" alt="CloudTunnels menu bar app showing a GCP IAP tunnel list with active and pending states" />
+        </div>
       </div>
-    </div>
-    <div class="hero-shot">
-      <img src="screenshots/20-add-gcp-tunnel.png" alt="CloudTunnels GCP IAP tab in macOS menu bar" loading="eager" fetchpriority="high" width="420" height="540">
     </div>
   </div>
 </section>
 
-<section id="providers">
+<!-- ─── FREELANCER MATH ─────────────────────────────────────────────── -->
+<section class="math" id="math">
   <div class="container">
-    <div class="section-head">
-      <div class="eyebrow">Four providers, one workflow</div>
-      <h2>Whatever the cloud, the same menu bar.</h2>
-      <p>Unified UI, unified status, unified config — across GCP IAP, AWS SSM, Cloud SQL Auth Proxy, and SSH. Each tunnel pins to its own account or profile, so multi-tenant work doesn't mean re-logging in.</p>
+    <div class="section-eyebrow"><span class="num">01</span>The freelancer math</div>
+    <h2 class="section-title">If you bill by the hour,<br/>this tool is unbillable hours back.</h2>
+    <p class="section-sub">
+      Every minute lost to <code style="font-family:var(--mono); color:var(--text)">gcloud auth login</code>, <code style="font-family:var(--mono); color:var(--text)">aws sso login --profile=</code>, and figuring out which port collides with what — that's time you can't put on an invoice. Run the numbers for yourself.
+    </p>
+
+    <div class="math-grid">
+      <div class="math-callout reveal">
+        If you bill at <strong>$100/hr</strong> and lose <strong>30 minutes a day</strong> to cloud CLI ceremony across <strong>4 clients</strong>, CloudTunnels pays you back <strong>~$13,000 a year</strong> — and that's before counting the focus tax of context-switching between profiles, regions, and SSH configs.
+      </div>
+
+      <div class="calc reveal" role="group" aria-label="Freelancer savings calculator">
+        <div class="calc-row">
+          <div class="calc-label">
+            <span class="calc-label-text">Hourly rate</span>
+            <span class="calc-label-value" id="calc-rate-label">$100</span>
+          </div>
+          <input type="range" id="calc-rate" min="40" max="350" step="5" value="100" aria-label="Hourly rate in dollars" />
+        </div>
+        <div class="calc-row">
+          <div class="calc-label">
+            <span class="calc-label-text">Minutes saved / day</span>
+            <span class="calc-label-value" id="calc-min-label">30 min</span>
+          </div>
+          <input type="range" id="calc-min" min="5" max="120" step="5" value="30" aria-label="Minutes saved per day" />
+        </div>
+        <div class="calc-row">
+          <div class="calc-label">
+            <span class="calc-label-text">Active clients</span>
+            <span class="calc-label-value" id="calc-clients-label">4</span>
+          </div>
+          <input type="range" id="calc-clients" min="1" max="12" step="1" value="4" aria-label="Number of active clients" />
+        </div>
+        <div class="calc-result">
+          <div class="calc-result-label">Annual savings (≈)</div>
+          <div class="calc-result-num" id="calc-out" aria-live="polite">$13,000</div>
+          <div class="calc-result-note" id="calc-detail">at 250 billable days · 4 clients × 30 min</div>
+        </div>
+      </div>
     </div>
-    <div class="providers-grid">
-      <article class="provider-card gcp">
-        <div class="shot"><img src="screenshots/20-add-gcp-tunnel.png" alt="GCP IAP tunnels"></div>
-        <div class="body">
-          <h3><span class="dot"></span>GCP IAP</h3>
-          <p>Wraps <code>gcloud compute start-iap-tunnel</code>. Pin per-tunnel gcloud accounts; run multiple identities side by side without re-auth.</p>
-        </div>
+  </div>
+</section>
+
+<!-- ─── WHO THIS IS FOR ─────────────────────────────────────────────── -->
+<section id="who">
+  <div class="container">
+    <div class="section-eyebrow"><span class="num">02</span>Who this is for</div>
+    <h2 class="section-title">Built for the people<br/>juggling everyone else's cloud.</h2>
+    <p class="section-sub">If you're on a salary at one company with one GCP project, you don't need this. If half your terminal history is <code style="font-family:var(--mono); color:var(--text)">gcloud config configurations activate</code>, you do.</p>
+
+    <div class="personas">
+      <article class="persona reveal">
+        <div class="persona-tag">Freelance DevOps Consultant</div>
+        <h3>3–8 clients. All different stacks.</h3>
+        <p class="persona-pain">Each client has their own GCP org, AWS org, naming conventions, and tunnel scripts. You spend the first 15 minutes of every session re-authing and finding the right port.</p>
+        <div class="persona-solve">Per-tunnel account pinning. One click to switch contexts. The CLI never leaks state between clients.</div>
       </article>
-      <article class="provider-card aws">
-        <div class="shot"><img src="screenshots/02-aws-tab.png" alt="AWS SSM tunnels"></div>
-        <div class="body">
-          <h3><span class="dot"></span>AWS SSM</h3>
-          <p>Wraps <code>aws ssm start-session</code>. Direct port-forward or bastion-to-RDS, with per-tunnel profile and region override.</p>
-        </div>
+
+      <article class="persona reveal">
+        <div class="persona-tag">Independent Platform Engineer</div>
+        <h3>Ship infra for two startups this quarter.</h3>
+        <p class="persona-pain">You're paid to deliver, not to remember which kubeconfig wants <code style="font-family:var(--mono); color:var(--text-dim)">proxy-url</code> set. Auth tokens expire mid-flow and silently break psql sessions.</p>
+        <div class="persona-solve">Kubeconfig auto-patch on tunnel up/down. Auth-expiry detection that pauses retries instead of hammering. Reconnect on net drops.</div>
       </article>
-      <article class="provider-card sql">
-        <div class="shot"><img src="screenshots/20-add-sql-tunnel.png" alt="Cloud SQL Proxy tunnels"></div>
-        <div class="body">
-          <h3><span class="dot"></span>Cloud SQL Proxy</h3>
-          <p>Drives <code>cloud-sql-proxy</code> v2. Private IP, auto IAM auth, and service-account impersonation as toggles.</p>
-        </div>
-      </article>
-      <article class="provider-card ssh">
-        <div class="shot"><img src="screenshots/04-ssh-tab.png" alt="SSH tunnels"></div>
-        <div class="body">
-          <h3><span class="dot"></span>SSH</h3>
-          <p>SOCKS5 + <code>-L</code> forwards over SSH config alias or IAP-wrapped <code>gcloud compute ssh</code>. Patches kubeconfig automatically.</p>
-        </div>
+
+      <article class="persona reveal">
+        <div class="persona-tag">Solo Founder Running Prod</div>
+        <h3>Your prod is the bastion is the bastion.</h3>
+        <p class="persona-pain">You don't have a platform team. The thing standing between you and a 2 a.m. page is a <code style="font-family:var(--mono); color:var(--text-dim)">~/notes/tunnels.md</code> file you wrote six months ago.</p>
+        <div class="persona-solve">Every tunnel saved, named, and one-click. Quick actions open k9s, psql, or a browser directly. Stop alt-tabbing through bash history.</div>
       </article>
     </div>
   </div>
 </section>
 
+<!-- ─── PROVIDERS ───────────────────────────────────────────────────── -->
+<section id="providers" style="background: var(--bg-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+  <div class="container">
+    <div class="section-eyebrow"><span class="num">03</span>Four providers, one workflow</div>
+    <h2 class="section-title">Whatever the cloud,<br/>the same menu bar.</h2>
+    <p class="section-sub">Each provider has its own quirks — auth ceremony, port semantics, expiry behavior. CloudTunnels normalizes them. Status, retries, port allocation, kill semantics, account pinning: identical across all four.</p>
+
+    <div class="providers">
+      <article class="provider reveal">
+        <div class="provider-head">
+          <span class="provider-num">01</span>
+          <h3 class="provider-title">GCP IAP</h3>
+          <code class="provider-cmd">gcloud compute start-iap-tunnel</code>
+        </div>
+        <p class="provider-desc">Direct IAP tunnels to instances behind a private network — without typing the command every time, and without losing your account context.</p>
+        <div class="provider-diff">per-tunnel gcloud account pinning — multiple client identities, no re-auth between them.</div>
+        <div class="provider-shot"><img src="screenshots/gcp.png" alt="GCP IAP tunnel panel" /></div>
+      </article>
+
+      <article class="provider reveal">
+        <div class="provider-head">
+          <span class="provider-num">02</span>
+          <h3 class="provider-title">AWS SSM</h3>
+          <code class="provider-cmd">aws ssm start-session</code>
+        </div>
+        <p class="provider-desc">SSM-managed port-forwards, including bastion-to-RDS chains. SSO flows handled, region collisions impossible.</p>
+        <div class="provider-diff">profile + region override per tunnel — no more AWS_PROFILE landmines in your shell.</div>
+        <div class="provider-shot"><img src="screenshots/aws.png" alt="AWS SSM tunnel panel" /></div>
+      </article>
+
+      <article class="provider reveal">
+        <div class="provider-head">
+          <span class="provider-num">03</span>
+          <h3 class="provider-title">Cloud SQL Proxy</h3>
+          <code class="provider-cmd">cloud-sql-proxy v2</code>
+        </div>
+        <p class="provider-desc">v2 proxy with private IP, IAM database auth, and service account impersonation. As toggles, not flag stew.</p>
+        <div class="provider-diff">IAM auth + SA impersonation as checkboxes — no scripts to maintain across clients.</div>
+        <div class="provider-shot"><img src="screenshots/sql.png" alt="Cloud SQL Proxy tunnel panel" /></div>
+      </article>
+
+      <article class="provider reveal">
+        <div class="provider-head">
+          <span class="provider-num">04</span>
+          <h3 class="provider-title">SSH</h3>
+          <code class="provider-cmd">ssh -D / -L · iap-wrapped</code>
+        </div>
+        <p class="provider-desc">SOCKS5 proxies and local forwards from your existing <code style="color:var(--text-dim); font-size:0.92em">ssh_config</code> aliases. Optionally wrapped in IAP.</p>
+        <div class="provider-diff">kubeconfig auto-patches proxy-url on connect, unsets on disconnect.</div>
+        <div class="provider-shot"><img src="screenshots/ssh.png" alt="SSH tunnel panel" /></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FEATURES ────────────────────────────────────────────────────── -->
 <section id="features">
   <div class="container">
-    <div class="section-head">
-      <div class="eyebrow">Designed for daily use</div>
-      <h2>The little things that add up.</h2>
-      <p>Built by an SRE for SREs. Every quirk you've hit running gcloud / aws / ssh tunnels by hand is solved here.</p>
-    </div>
-    <div class="feature-grid">
-      <div class="feature">
+    <div class="section-eyebrow"><span class="num">04</span>The little things that add up</div>
+    <h2 class="section-title">Every quirk you've hit<br/>by hand — solved, then boring.</h2>
+    <p class="section-sub">These aren't features in a brochure. They're the specific moments where the CLI bites you and you reach for a sticky note. Each one is a few minutes a day you stop losing.</p>
+
+    <div class="features">
+      <div class="feature reveal">
+        <div class="feature-num">01</div>
         <h3>Auto-reconnect</h3>
-        <p>Network drops or instance restarts retry up to 3× with backoff. Auth-expiry skips reconnect to avoid loops.</p>
+        <p>3× retry with backoff on network drops or instance restart. Auth-expiry skips retry to avoid loop storms.</p>
+        <div class="feature-time">~5 min/day saved on flaky coffee-shop wifi</div>
       </div>
-      <div class="feature">
+      <div class="feature reveal">
+        <div class="feature-num">02</div>
         <h3>Auth-expiry detection</h3>
-        <p>Watches stderr for token-revoked patterns per provider, surfaces a notification, and pauses retries.</p>
+        <p>stderr watcher per provider. Token-revoked patterns surface a notification and pause retries before they fan out.</p>
+        <div class="feature-time">no more silent dead tunnels mid-debug</div>
       </div>
-      <div class="feature">
-        <h3>Free-port autodetection</h3>
-        <p>Add Tunnel form auto-fills the next free local port — a second Postgres tunnel never collides with the first.</p>
+      <div class="feature reveal">
+        <div class="feature-num">03</div>
+        <h3>Free-port autodetect</h3>
+        <p>Add-Tunnel form fills the next free local port. A second Postgres tunnel doesn't collide with the first.</p>
+        <div class="feature-time">~2 min/day not spent on <code style="font-family:var(--mono); color:var(--text-dim)">lsof -i :5432</code></div>
       </div>
-      <div class="feature">
+      <div class="feature reveal">
+        <div class="feature-num">04</div>
         <h3>Kubeconfig auto-patch</h3>
-        <p>SSH tunnels with a SOCKS port automatically set <code>proxy-url</code> on connect and unset it on disconnect.</p>
+        <p>SSH/SOCKS tunnels set <code style="font-family:var(--mono); color:var(--text)">proxy-url</code> on connect, unset on disconnect. No leaked stanzas across clients.</p>
+        <div class="feature-time">never edit ~/.kube/config by hand again</div>
       </div>
-      <div class="feature">
+      <div class="feature reveal">
+        <div class="feature-num">05</div>
         <h3>Quick actions</h3>
-        <p>One-click open: <code>k9s</code>, <code>psql</code>, browsers, RDP, VNC, MongoDB Compass — driven by tunnel kind.</p>
+        <p>One-click open: k9s, psql, browser, RDP, VNC, MongoDB Compass — driven by tunnel kind. No more memorizing flags.</p>
+        <div class="feature-time">~3 min/day in tool-launch friction</div>
       </div>
-      <div class="feature">
+      <div class="feature reveal">
+        <div class="feature-num">06</div>
         <h3>Calendar radar</h3>
-        <p>Next-meeting banner with Join button (Zoom / Meet / Teams / Webex auto-detected) plus pre-meeting reminders.</p>
+        <p>Next-meeting banner with Join (Zoom / Meet / Teams / Webex) and a pre-meeting ping while your tunnels stay up.</p>
+        <div class="feature-time">never join a client call 4 min late again</div>
       </div>
     </div>
   </div>
 </section>
 
-<section id="tools">
+<!-- ─── TOOLS ───────────────────────────────────────────────────────── -->
+<section id="tools" style="background: var(--bg-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
   <div class="container">
-    <div class="section-head">
-      <div class="eyebrow">Tools tab</div>
-      <h2>23+ utilities you stop opening other apps for.</h2>
-      <p>Port killer, JSON formatter, cert chain inspector, JWT decoder, kubeconfig viewer, cluster health, cron parser. Everything runs locally.</p>
-    </div>
-    <div class="tools-layout">
-      <img class="tools-shot" src="screenshots/05b-tools-tab-bottom.png" alt="Tools tab grid" loading="lazy">
-      <div class="tool-categories">
-        <div class="tool-cat">
-          <h4>Network</h4>
-          <ul><li>Port Inspector</li><li>Public IP</li></ul>
+    <div class="section-eyebrow"><span class="num">05</span>The Tools tab</div>
+    <h2 class="section-title">23+ utilities,<br/>zero context switches.</h2>
+    <p class="section-sub">Stop opening jwt.io, port killers, base64 sites, online cert decoders. Everything you reach for during a debugging session is in the same window as your tunnels. Local-only — nothing leaves your machine.</p>
+
+    <div class="tools-shell reveal" role="img" aria-label="CloudTunnels Tools tab showing utility tiles grouped by category">
+      <div class="tools-shell-head">
+        <span class="wordmark">FOURNINE</span>
+        <div class="tools-tab-strip" aria-hidden="true">
+          <span class="tools-tab">☁ GCP</span>
+          <span class="tools-tab">⛅ AWS</span>
+          <span class="tools-tab">🛢 SQL</span>
+          <span class="tools-tab">▶_ SSH</span>
+          <span class="tools-tab active">🔨 Tools</span>
         </div>
-        <div class="tool-cat">
-          <h4>Encoding</h4>
-          <ul><li>JSON Formatter</li><li>Base64</li><li>JWT Decoder</li><li>Hash Generator</li></ul>
+      </div>
+
+      <div class="tools-groups">
+        <div>
+          <div class="tools-group-title">Network <span class="tools-group-title-count">02</span></div>
+          <div class="tools-tiles">
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="5" height="12"/><rect x="10" y="6" width="5" height="12"/><rect x="17" y="6" width="4" height="12"/></svg>Port Inspector</div>
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>Public IP</div>
+          </div>
         </div>
-        <div class="tool-cat">
-          <h4>TLS / SSL</h4>
-          <ul><li>SSL Checker</li><li>Certificate Decoder</li><li>CSR Decoder</li><li>Key Matcher</li><li>SSL Converter</li></ul>
+        <div>
+          <div class="tools-group-title">Encoding <span class="tools-group-title-count">04</span></div>
+          <div class="tools-tiles">
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 4c-3 0-3 4-3 8s0 8 3 8M16 4c3 0 3 4 3 8s0 8-3 8"/></svg>JSON Formatter</div>
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><text x="12" y="16" font-size="9" text-anchor="middle" fill="currentColor" stroke="none" font-family="monospace" font-weight="700">b64</text></svg>Base64</div>
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="5" height="12"/><rect x="10" y="6" width="5" height="12"/><rect x="17" y="6" width="4" height="12"/></svg>JWT Decoder</div>
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>Hash Generator</div>
+          </div>
         </div>
-        <div class="tool-cat">
-          <h4>Identifiers</h4>
-          <ul><li>UUID Generator</li><li>Timestamp</li></ul>
+        <div>
+          <div class="tools-group-title">TLS / SSL <span class="tools-group-title-count">05</span></div>
+          <div class="tools-tiles">
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3 L20 6v6c0 5-4 8-8 9-4-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>SSL Checker</div>
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14"/><circle cx="9" cy="12" r="3"/><path d="M14 10h6M14 14h4"/></svg>Cert Decoder</div>
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 4h11l4 4v12H5z"/><path d="M9 12h8M9 16h6"/></svg>CSR Decoder</div>
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M19 9v6M16 9v6"/></svg>Key Matcher</div>
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h16M19 8l-3-3M19 8l-3 3M21 16H5M5 16l3 3M5 16l3-3"/></svg>SSL Converter</div>
+          </div>
         </div>
-        <div class="tool-cat">
-          <h4>Generation</h4>
-          <ul><li>Password</li><li>JWT / HMAC Secret</li><li>Share Secret</li></ul>
+        <div>
+          <div class="tools-group-title">Identifiers <span class="tools-group-title-count">02</span></div>
+          <div class="tools-tiles">
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="18" height="12" rx="2"/></svg>UUID Generator</div>
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Timestamp</div>
+          </div>
         </div>
-        <div class="tool-cat">
-          <h4>Cloud</h4>
-          <ul><li>kubectl Context</li><li>Kubeconfig Inspector</li><li>Cluster Health</li><li>K8s Secret Coder</li><li>Cron Parser</li></ul>
+        <div>
+          <div class="tools-group-title">Generation <span class="tools-group-title-count">03</span></div>
+          <div class="tools-tiles">
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="12" r="3"/><path d="M11 12h12M20 9v6M17 9v6"/></svg>Password</div>
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="10" width="14" height="10"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>JWT/HMAC Secret</div>
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M9 11l6-4M9 13l6 4"/></svg>Share Secret</div>
+          </div>
         </div>
-        <div class="tool-cat">
-          <h4>Productivity</h4>
-          <ul><li>Scratchpad</li><li>Calendar</li></ul>
+        <div>
+          <div class="tools-group-title">Cloud <span class="tools-group-title-count">05</span></div>
+          <div class="tools-tiles">
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12,3 21,8 21,16 12,21 3,16 3,8"/></svg>kubectl Context</div>
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14"/><circle cx="10" cy="12" r="2"/><path d="M10 12l5 5"/></svg>Kubeconfig</div>
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>Cluster Health</div>
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 8l-3 4 3 4M16 8l3 4-3 4M14 5l-4 14"/></svg>K8s Secret</div>
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M8 4l-2-1M16 4l2-1"/></svg>Cron Parser</div>
+          </div>
+        </div>
+        <div>
+          <div class="tools-group-title">Productivity <span class="tools-group-title-count">02</span></div>
+          <div class="tools-tiles">
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3h12l3 3v15H5z"/><path d="M8 10h10M8 14h8M8 18h6"/></svg>Scratchpad</div>
+            <div class="tools-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendar</div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<section id="install">
+<!-- ─── COMPARE ─────────────────────────────────────────────────────── -->
+<section id="compare">
   <div class="container">
-    <div class="section-head">
-      <div class="eyebrow">Install</div>
-      <h2>Build it, run it, scriptable.</h2>
-      <p>Requires macOS 13+ and Xcode 15 command-line tools. Universal binary out of the box.</p>
+    <div class="section-eyebrow"><span class="num">06</span>Why not just use the CLI?</div>
+    <h2 class="section-title">Honestly — you could.<br/>You just won't enjoy it.</h2>
+    <p class="section-sub">Everything CloudTunnels does is technically possible with the raw provider tools and a folder of shell scripts. So here's the honest comparison.</p>
+
+    <div class="compare reveal">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Raw CLI</th>
+            <th>Other tunnel managers</th>
+            <th>CloudTunnels</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Multi-account pinning per tunnel</td>
+            <td><span class="cross" aria-label="No"></span><span>Shell hacks</span></td>
+            <td><span class="partial" aria-label="Partial"></span><span>Global only</span></td>
+            <td class="col-ct"><span class="check" aria-label="Yes"></span><span>Per-tunnel</span></td>
+          </tr>
+          <tr>
+            <td>Auto-reconnect with backoff</td>
+            <td><span class="cross" aria-label="No"></span><span>Bash loops</span></td>
+            <td><span class="partial" aria-label="Partial"></span><span>Sometimes</span></td>
+            <td class="col-ct"><span class="check" aria-label="Yes"></span><span>3× w/ backoff</span></td>
+          </tr>
+          <tr>
+            <td>Auth-expiry detection</td>
+            <td><span class="cross" aria-label="No"></span><span>Silent failures</span></td>
+            <td><span class="cross" aria-label="No"></span></td>
+            <td class="col-ct"><span class="check" aria-label="Yes"></span><span>Per provider</span></td>
+          </tr>
+          <tr>
+            <td>Free-port detection</td>
+            <td><span class="cross" aria-label="No"></span><span>lsof + memory</span></td>
+            <td><span class="partial" aria-label="Partial"></span></td>
+            <td class="col-ct"><span class="check" aria-label="Yes"></span></td>
+          </tr>
+          <tr>
+            <td>Kubeconfig auto-patch</td>
+            <td><span class="cross" aria-label="No"></span><span>Manual edits</span></td>
+            <td><span class="cross" aria-label="No"></span></td>
+            <td class="col-ct"><span class="check" aria-label="Yes"></span><span>On up/down</span></td>
+          </tr>
+          <tr>
+            <td>Integrated toolbox</td>
+            <td><span class="cross" aria-label="No"></span><span>jwt.io et al.</span></td>
+            <td><span class="cross" aria-label="No"></span></td>
+            <td class="col-ct"><span class="check" aria-label="Yes"></span><span>23+ utilities</span></td>
+          </tr>
+          <tr>
+            <td>Scriptable CLI</td>
+            <td><span class="check" aria-label="Yes"></span><span>It is the CLI</span></td>
+            <td><span class="partial" aria-label="Partial"></span></td>
+            <td class="col-ct"><span class="check" aria-label="Yes"></span><span><code style="font-family:var(--mono)">ctun</code></span></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-    <div class="install-cols">
-      <div>
-        <h3>App + CLI</h3>
-<pre><code><span class="com"># clone, build, install</span>
-git clone https://github.com/FournineCS/cloud-tunnels.git
-cd cloud-tunnels
-make app          <span class="com"># build/CloudTunnels.app</span>
-make install      <span class="com"># /Applications</span>
-make install-cli  <span class="com"># /usr/local/bin/ctun</span></code></pre>
+  </div>
+</section>
+
+<!-- ─── INSTALL ─────────────────────────────────────────────────────── -->
+<section id="install" style="background: var(--bg-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+  <div class="container">
+    <div class="section-eyebrow"><span class="num">07</span>Install</div>
+    <h2 class="section-title">One command.<br/>Then drive it from the shell.</h2>
+    <p class="section-sub">macOS 13 or later. Universal binary. Homebrew is the path of least resistance; source builds are documented for the people who want them.</p>
+
+    <div class="install-block reveal">
+      <div class="install-cmd-large">
+        <span class="prompt">$</span>
+        <code>brew install fourninecs/tap/cloudtunnels</code>
+        <button class="copy-btn" type="button" data-copy="brew install fourninecs/tap/cloudtunnels" aria-label="Copy install command">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="4" y="4" width="9" height="9" rx="1.5"/><path d="M11 4V3a1.5 1.5 0 0 0-1.5-1.5h-6A1.5 1.5 0 0 0 2 3v6A1.5 1.5 0 0 0 3.5 10.5H4"/></svg>
+          <span>Copy</span>
+        </button>
       </div>
-      <div>
-        <h3>Drive it from the shell</h3>
-<pre><code>ctun list                  <span class="com"># all tunnels</span>
-ctun start prod-db         <span class="com"># foreground</span>
-ctun start prod-db --detach
-ctun status
-ctun stop prod-db          <span class="com"># also stops GUI tunnels</span></code></pre>
+
+      <details class="source">
+        <summary>Build from source</summary>
+<pre><span style="color:var(--text-dimmer)"># clone, build, install</span>
+<span style="color:var(--accent)">$</span> git clone https://github.com/FournineCS/cloud-tunnels.git
+<span style="color:var(--accent)">$</span> cd cloud-tunnels
+<span style="color:var(--accent)">$</span> make app          <span style="color:var(--text-dimmer)"># build/CloudTunnels.app</span>
+<span style="color:var(--accent)">$</span> make install      <span style="color:var(--text-dimmer"># /Applications</span>
+<span style="color:var(--accent)">$</span> make install-cli  <span style="color:var(--text-dimmer)"># /usr/local/bin/ctun</span></pre>
+      </details>
+    </div>
+
+    <div class="terminal reveal" aria-label="CLI usage example">
+      <div class="terminal-bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="title">~ — ctun — 92×16</span>
+        <span class="title-spacer"></span>
+      </div>
+      <pre class="terminal-body"><span class="comment"># list every tunnel across every client</span>
+<span class="prompt">$</span> ctun list
+NAME                       KIND       PORT   STATUS  LAT
+prod-postgres-primary      gcp-iap    5433   <span class="ok">up</span>      18ms
+staging-rds-bastion        aws-ssm    5434   <span class="ok">up</span>      42ms
+analytics-replica          cloud-sql  5435   <span class="ok">up</span>      11ms
+infra-jumphost-socks       ssh        1080   <span class="ok">up</span>       9ms
+
+<span class="comment"># start one in the background, get back to work</span>
+<span class="prompt">$</span> ctun start prod-db --detach
+<span class="ok">✓</span> tunnel up · pid 48217 · :5433 → prod-db-01:5432
+
+<span class="prompt">$</span> ctun status
+4 active · 0 reconnecting · 0 failed
+
+<span class="prompt">$</span> ctun stop prod-db
+<span class="comment"># also stops GUI tunnels — single source of truth</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SOCIAL PROOF ────────────────────────────────────────────────── -->
+<section class="social" id="social">
+  <div class="container">
+    <div class="section-eyebrow"><span class="num">08</span>Out in the wild</div>
+    <h2 class="section-title">Open source.<br/>Receipts welcome.</h2>
+    <p class="section-sub">CloudTunnels is brand new and unapologetically targeted at a specific audience. As real users start running it across their clients, their words go here.</p>
+
+    <div class="social-grid">
+      <div class="badge-card reveal">
+        <div class="badge-card-title">Repository</div>
+        <a href="https://github.com/FournineCS/cloud-tunnels" target="_blank" rel="noopener" style="display:inline-block">
+          <img src="https://img.shields.io/github/stars/FournineCS/cloud-tunnels?style=for-the-badge&logo=github&label=Stars&color=5eead4&labelColor=0a0d18" alt="GitHub stars" />
+        </a>
+        <a href="https://github.com/FournineCS/cloud-tunnels" target="_blank" rel="noopener" style="display:inline-block">
+          <img src="https://img.shields.io/github/v/release/FournineCS/cloud-tunnels?style=for-the-badge&label=Release&color=22c55e&labelColor=0a0d18" alt="Latest release" />
+        </a>
+        <a href="https://github.com/FournineCS/cloud-tunnels/blob/main/LICENSE" target="_blank" rel="noopener" style="display:inline-block">
+          <img src="https://img.shields.io/github/license/FournineCS/cloud-tunnels?style=for-the-badge&label=License&color=e8ecf3&labelColor=0a0d18" alt="License" />
+        </a>
+      </div>
+
+      <div class="quote-slot reveal">
+        <span class="qmark">"</span>
+        <span style="font-style: italic;">Quotes from Product Hunt, X, and Hacker News will land here after launch.</span>
+        <span class="qsrc">// reserved slot · go/no-go after PH ship</span>
       </div>
     </div>
   </div>
 </section>
 
-<footer class="site">
-  <div class="container row">
-    <div>© Fournine. MIT-licensed. Built in Swift.</div>
-    <div>
-      <a href="https://github.com/FournineCS/cloud-tunnels">GitHub</a> ·
-      <a href="https://github.com/FournineCS/cloud-tunnels/blob/main/USERGUIDE.md">User guide</a> ·
-      <a href="https://github.com/FournineCS/cloud-tunnels/issues">Issues</a>
+<!-- ─── FOOTER ──────────────────────────────────────────────────────── -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="brand">
+          <img src="logo.png" alt="" style="width:24px; height:24px;"/>
+          <span style="font-weight:600">CloudTunnels</span>
+        </div>
+        <p>The macOS menu bar for freelance cloud engineers. Built by <a href="https://fourninecloud.com" target="_blank" rel="noopener" style="color:var(--text); text-decoration:underline; text-decoration-color: var(--accent); text-underline-offset: 3px;">Fournine Cloud</a> · MIT-licensed · written in Swift.</p>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Product</div>
+        <ul>
+          <li><a href="#math">Freelancer math</a></li>
+          <li><a href="#providers">Providers</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#tools">Tools</a></li>
+          <li><a href="#install">Install</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Code</div>
+        <ul>
+          <li><a href="https://github.com/FournineCS/cloud-tunnels" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="https://github.com/FournineCS/cloud-tunnels/blob/main/USERGUIDE.md" target="_blank" rel="noopener">User guide</a></li>
+          <li><a href="https://github.com/FournineCS/cloud-tunnels/issues" target="_blank" rel="noopener">Issues</a></li>
+          <li><a href="https://github.com/FournineCS/cloud-tunnels/releases" target="_blank" rel="noopener">Releases</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Elsewhere</div>
+        <ul>
+          <li><a href="https://fourninecloud.com" target="_blank" rel="noopener">Fournine Cloud</a></li>
+          <li><a href="https://thekubeguy.com" target="_blank" rel="noopener">TheKubeGuy</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© Fournine Cloud · MIT-licensed · macOS 13+</span>
+      <img class="armadillo-mark" src="logo.png" alt="" aria-hidden="true"/>
     </div>
   </div>
 </footer>
+
+<script>
+(function() {
+  // ── Calculator ────────────────────────────────────────────────
+  const rate    = document.getElementById('calc-rate');
+  const min     = document.getElementById('calc-min');
+  const clients = document.getElementById('calc-clients');
+  const rateLbl = document.getElementById('calc-rate-label');
+  const minLbl  = document.getElementById('calc-min-label');
+  const clLbl   = document.getElementById('calc-clients-label');
+  const out     = document.getElementById('calc-out');
+  const detail  = document.getElementById('calc-detail');
+
+  const BILLABLE_DAYS = 250; // ~weekdays minus PTO/holidays
+
+  let currentDisplay = 13000;
+  let animFrame = null;
+
+  function animateTo(target) {
+    if (animFrame) cancelAnimationFrame(animFrame);
+    const start = currentDisplay;
+    const delta = target - start;
+    const dur = 600;
+    const t0 = performance.now();
+    function step(t) {
+      const p = Math.min(1, (t - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      currentDisplay = Math.round(start + delta * eased);
+      out.textContent = '$' + currentDisplay.toLocaleString('en-US');
+      if (p < 1) animFrame = requestAnimationFrame(step);
+    }
+    animFrame = requestAnimationFrame(step);
+  }
+
+  function compute() {
+    const r  = +rate.value;
+    const m  = +min.value;
+    const c  = +clients.value;
+    rateLbl.textContent = '$' + r;
+    minLbl.textContent  = m + ' min';
+    clLbl.textContent   = c;
+    // savings = (minutes per day per client * number of clients / 60) * billable days * hourly rate
+    const hoursPerYear = (m * c / 60) * BILLABLE_DAYS;
+    const annual = Math.round(hoursPerYear * r);
+    animateTo(annual);
+    detail.textContent = BILLABLE_DAYS + ' billable days · ' + c + ' client' + (c === 1 ? '' : 's') + ' × ' + m + ' min';
+  }
+
+  [rate, min, clients].forEach(el => el.addEventListener('input', compute));
+  compute();
+
+  // ── Copy buttons ──────────────────────────────────────────────
+  document.querySelectorAll('[data-copy]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copy);
+        const label = btn.querySelector('span');
+        const prev = label ? label.textContent : '';
+        if (label) label.textContent = 'Copied';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          if (label) label.textContent = prev;
+          btn.classList.remove('copied');
+        }, 1600);
+      } catch (e) {
+        // fallback: select and let user copy manually
+        const r = document.createRange();
+        const span = btn.previousElementSibling;
+        if (span) {
+          r.selectNodeContents(span);
+          const sel = window.getSelection();
+          sel.removeAllRanges(); sel.addRange(r);
+        }
+      }
+    });
+  });
+
+  // ── Reveal on scroll ──────────────────────────────────────────
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('in');
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+  } else {
+    document.querySelectorAll('.reveal').forEach(el => el.classList.add('in'));
+  }
+})();
+</script>
 
 </body>
 </html>
